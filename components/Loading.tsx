@@ -1,9 +1,10 @@
 // components/Loading.tsx
+import { Loader2 } from 'lucide-react';
+
 export default function Loading() {
-        return (
-          <div className="flex items-center justify-center h-screen">
-            <p>Loading...</p>
-          </div>
-        );
-      }
-      
+  return (
+    <div className="flex items-center justify-center h-screen">
+      <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+    </div>
+  );
+}

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
@@ -6,7 +6,7 @@ import SignInModal from './auth/SignInModal';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Button } from './ui/button';
-import {LockKeyhole } from 'lucide-react'
+import { LockKeyhole } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 
 export default function Header() {
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
@@ -38,18 +38,21 @@ export default function Header() {
             </Link>
           </div>
           <div className="flex items-center">
-            {status === "loading" ? (
+            {status === 'loading' ? (
               <div>Loading...</div>
             ) : session ? (
               <div className="flex items-center">
-                {session.user?.role === 1 && (
-                  <Link href="/admin" className="mr-4 text-blue-600 hover:text-blue-800">
-                    <LockKeyhole className='text-black w-5'/>
+                {session.user?.role === '1' && (
+                  <Link
+                    href="/admin"
+                    className="mr-4 text-blue-600 hover:text-blue-800"
+                  >
+                    <LockKeyhole className="text-black w-5" />
                   </Link>
                 )}
                 <DropdownMenu>
-                <DropdownMenuTrigger className="focus:outline-none">
-                {session.user?.image ? (
+                  <DropdownMenuTrigger className="focus:outline-none">
+                    {session.user?.image ? (
                       <Image
                         src={session.user.image}
                         alt="User"
@@ -61,16 +64,17 @@ export default function Header() {
                       <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
                     )}
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent side='bottom' align='end'>
+                  <DropdownMenuContent side="bottom" align="end">
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      {session.user?.email}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className='cursor-pointer' onSelect={(event) => {
-                      event.preventDefault();
-                      signOut();
-                    }}>
+                    <DropdownMenuItem>{session.user?.email}</DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        signOut();
+                      }}
+                    >
                       Sign out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
