@@ -39,7 +39,7 @@ model Session {
 
 model User {
   id            String    @id @default(cuid())
-  name     String?
+  name          String?
   username      String?
   email         String?   @unique
   emailVerified DateTime?
@@ -72,4 +72,63 @@ model Video {
   url      String  @unique
   note     String?
   isActive Boolean @default(false)
+}
+
+model Exercise {
+  id          Int     @id @default(autoincrement())
+  title       String
+  duration    String
+  description String? @db.Text
+  videoUrl    String?
+}
+
+// Updated models for sites, categories, and languages
+
+model SiteCategories {
+  id    Int            @id @default(autoincrement())
+  name  String         @unique
+  sites SiteCategory[]
+}
+
+model SiteLanguages {
+  id    Int            @id @default(autoincrement())
+  name  String         @unique
+  sites SiteLanguage[]
+}
+
+model Site {
+  id           Int            @id @default(autoincrement())
+  domainName   String         @unique
+  monthly      Int
+  categories   SiteCategory[]
+  languages    SiteLanguage[]
+  urls         URL[]
+}
+
+model SiteCategory {
+  site       Site           @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  siteId     Int
+  category   SiteCategories @relation(fields: [categoryId], references: [id])
+  categoryId Int
+
+  @@id([siteId, categoryId])
+}
+
+model SiteLanguage {
+  site       Site           @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  siteId     Int
+  language   SiteLanguages  @relation(fields: [languageId], references: [id])
+  languageId Int
+
+  @@id([siteId, languageId])
+}
+
+model URL {
+  id        Int     @id @default(autoincrement())
+  url       String
+  siteId    Int
+  reviewed  Boolean @default(false)
+  site      Site    @relation(fields: [siteId], references: [id])
+
+  @@unique([url, siteId])
 }

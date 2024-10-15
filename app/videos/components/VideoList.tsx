@@ -1,14 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Check,
-  Settings2,
-  Trash2,
-  ExternalLink,
-  StickyNote,
-  X,
-} from 'lucide-react';
+import { Check, ExternalLink, StickyNote } from 'lucide-react';
 import { Video } from '@prisma/client';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/DataTable';
@@ -23,7 +16,6 @@ export default function VideoList() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingVideo, setEditingVideo] = useState<Video | null>(null);
   const [expandedNotes, setExpandedNotes] = useState<number[]>([]);
-  const [deletingVideo, setDeletingVideo] = useState<number | null>(null);
   const [notification, setNotification] = useState<{
     message: string;
     type: 'success' | 'error';
@@ -54,7 +46,6 @@ export default function VideoList() {
     } catch (error) {
       setNotification({ message: 'Failed to delete video', type: 'error' });
     }
-    setDeletingVideo(null);
   };
 
   const toggleVideoActive = async (id: number, currentStatus: boolean) => {
@@ -180,59 +171,24 @@ export default function VideoList() {
         ),
       headerClassName: 'w-1/12',
     },
-    {
-      id: 'actions',
-      header: 'Actions',
-      cell: ({ row }) => (
-        <div className="flex justify-center items-center space-x-2">
-          <button
-            onClick={() => openEditModal(row.original)}
-            className="text-indigo-600 hover:text-indigo-900"
-          >
-            <Settings2 className="w-4 h-4" />
-          </button>
-          {deletingVideo === row.original.id ? (
-            <>
-              <button
-                onClick={() => deleteVideo(row.original.id)}
-                className="text-green-600 hover:text-green-900"
-              >
-                <Check strokeWidth="3" className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setDeletingVideo(null)}
-                className="text-red-600 hover:text-red-900"
-              >
-                <X strokeWidth="3" className="w-4 h-4" />
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => setDeletingVideo(row.original.id)}
-              className="text-red-600 hover:text-red-900"
-            >
-              <X strokeWidth="3" className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      ),
-      headerClassName: 'w-2/12',
-    },
   ];
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-4">
         <Button variant="outline" onClick={() => setIsAddModalOpen(true)}>
           Add Video
         </Button>
-        <Button variant="outline" onClick={openRandomVideo} className="mb-4">
+        <Button variant="outline" onClick={openRandomVideo}>
           Random Video
         </Button>
       </div>
       <DataTable
         columns={columns}
         data={videos}
+        keyField="id"
+        onEdit={openEditModal}
+        onDelete={deleteVideo}
         expandedRows={expandedNotes}
         renderSubComponent={({ row }) => (
           <div className="p-4 bg-gray-50">

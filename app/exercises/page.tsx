@@ -1,9 +1,9 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../api/auth/[...nextauth]/route';
-import VideoList from './components/VideoList';
-import AddVideoButton from './components/AddVideoButton';
+import ExerciseList from './components/ExerciseList';
+import { redirect } from 'next/navigation';
 
-export default async function VideosPage() {
+export default async function ExercisesPage() {
   const session = await getServerSession(authOptions);
 
   if (!session || session.user.role !== 'admin') {
@@ -16,8 +16,8 @@ export default async function VideosPage() {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold my-6">Videos</h1>
-      <VideoList />
+      <h1 className="text-2xl font-bold my-6">Exercises</h1>
+      <ExerciseList />
     </div>
   );
 }

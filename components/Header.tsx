@@ -27,67 +27,98 @@ export default function Header() {
 
   return (
     <header className="bg-white border-b border-gray-200">
-      <nav className="container mx-auto px-6 py-3">
+      <nav className="container mx-auto px-4 py-3">
         <div className="flex justify-between items-center">
-          <div className="flex items-center">
-            <Link href="/" className="text-xl font-bold mr-6">
-              Your Logo
-            </Link>
-            <Link href="/about" className="text-gray-600 hover:text-gray-900">
-              About
-            </Link>
-          </div>
-          <div className="flex items-center">
-            {status === 'loading' ? (
-              <div>Loading...</div>
-            ) : session ? (
-              <div className="flex items-center">
-                {session.user?.role === '1' && (
-                  <Link
-                    href="/admin"
-                    className="mr-4 text-blue-600 hover:text-blue-800"
-                  >
-                    <LockKeyhole className="text-black w-5" />
-                  </Link>
-                )}
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="focus:outline-none">
-                    {session.user?.image ? (
-                      <Image
-                        src={session.user.image}
-                        alt="User"
-                        width={32}
-                        height={32}
-                        className="rounded-lg"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
-                    )}
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent side="bottom" align="end">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>{session.user?.email}</DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onSelect={(event) => {
-                        event.preventDefault();
-                        signOut();
-                      }}
-                    >
-                      Sign out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            ) : (
-              <Button
-                onClick={() => setIsSignInModalOpen(true)}
-                variant="outline"
+          <Link href="/" className="text-xl font-bold">
+            Console
+          </Link>
+
+          <div className="flex space-x-10">
+            <div className="flex items-center space-x-5 font-semibold text-sm">
+              <Link
+                href="/about"
+                className="text-gray-400  hover:text-gray-900 transition"
               >
-                Sign In
-              </Button>
-            )}
+                About
+              </Link>
+              <Link
+                href="/todos"
+                className="text-gray-400 hover:text-gray-900 transition"
+              >
+                Todos
+              </Link>
+              <Link
+                href="/sites"
+                className="text-gray-400 hover:text-gray-900 transition"
+              >
+                Sites
+              </Link>
+              <Link
+                href="/videos"
+                className="text-gray-400 hover:text-gray-900 transition"
+              >
+                Videos
+              </Link>
+              <Link
+                href="/exercises"
+                className="text-gray-400 hover:text-gray-900 transition"
+              >
+                Exercises
+              </Link>
+            </div>
+
+            <div className="flex items-center">
+              {status === 'loading' ? (
+                <div>Loading...</div>
+              ) : session ? (
+                <div className="flex items-center">
+                  {session.user?.role === '1' && (
+                    <Link
+                      href="/admin"
+                      className="mr-4 text-blue-600 hover:text-blue-800"
+                    >
+                      <LockKeyhole className="text-black w-5" />
+                    </Link>
+                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="focus:outline-none">
+                      {session.user?.image ? (
+                        <Image
+                          src={session.user.image}
+                          alt="User"
+                          width={32}
+                          height={32}
+                          className="rounded-lg"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
+                      )}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent side="bottom" align="end">
+                      <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem>{session.user?.email}</DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onSelect={(event) => {
+                          event.preventDefault();
+                          signOut();
+                        }}
+                      >
+                        Sign out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ) : (
+                <Button
+                  onClick={() => setIsSignInModalOpen(true)}
+                  variant="outline"
+                >
+                  Sign In
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </nav>
