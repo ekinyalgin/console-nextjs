@@ -311,18 +311,18 @@ export default function SiteList() {
           <div>
             <Link
               href={`/sites/${row.original.domainName}`}
-              className={`hover:underline ${
+              className={` ${
                 siteStatuses[row.original.domainName]?.hasNotReviewedUrls
-                  ? 'text-blue-600 underline'
+                  ? 'text-black underline'
                   : siteStatuses[row.original.domainName]?.hasExcel
                     ? ''
-                    : 'font-normal text-black'
+                    : 'font-normal text-gray-400'
               }`}
             >
               {displayDomain}
             </Link>
             {downloadStatus[row.original.domainName] && (
-              <div className="text-xs text-gray-400 font-normal">
+              <div className="text-xs text-gray-400 font-normal block">
                 {downloadStatus[row.original.domainName]}
               </div>
             )}
@@ -334,6 +334,7 @@ export default function SiteList() {
       Header: 'Monthly',
       accessor: 'monthly',
       headerClassName: 'w-1/2',
+      className: 'text-xs',
     },
     {
       Header: 'Languages',

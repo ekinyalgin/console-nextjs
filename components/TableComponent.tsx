@@ -57,13 +57,16 @@ export function TableComponent<T extends object>({
     <table className="shadow-sm rounded min-w-full bg-white">
       <thead className="bg-gray-50 text-xs uppercase h-10 text-gray-600">
         <tr>
-          {onSelectChange && onSelectAll && (
+          {onSelectChange && (
             <th className="w-1/12 px-4 py-2 font-normal">
-              <input
-                type="checkbox"
-                checked={isAllSelected}
-                onChange={(e) => onSelectAll(e.target.checked)}
-              />
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  onChange={(e) => onSelectAll && onSelectAll(e.target.checked)}
+                  className="mx-auto"
+                />
+              </div>
             </th>
           )}
           {columns.map((column, index) => (
