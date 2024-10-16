@@ -6,10 +6,9 @@ import { Exercise } from '@prisma/client';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/DataTable';
 import Notification from '@/components/Notification';
-import { AddExerciseModal } from './AddExerciseModal';
-import { EditExerciseModal } from './EditExerciseModal';
+import { ExerciseModal } from './ExerciseModal';
 import { ColumnDef } from '@tanstack/react-table';
-import { useRouter } from 'next/navigation';
+import { ExerciseActions } from './ExerciseActions';
 
 export default function ExerciseList() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -25,7 +24,6 @@ export default function ExerciseList() {
   } | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showOnlySelected, setShowOnlySelected] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     fetchExercises();
@@ -56,8 +54,11 @@ export default function ExerciseList() {
     );
   };
 
-  const addExercise = (newExercise: Exercise) => {
-    setExercises((prevExercises) => [...prevExercises, newExercise]);
+  const addExercise = (newExercise: Partial<Exercise>) => {
+    setExercises((prevExercises) => [
+      ...prevExercises,
+      newExercise as Exercise,
+    ]);
     setNotification({
       message: 'Exercise added successfully',
       type: 'success',
@@ -69,7 +70,7 @@ export default function ExerciseList() {
     setIsEditModalOpen(true);
   };
 
-  const handleEditSubmit = async (updatedExercise: Exercise) => {
+  const handleEditSubmit = async (updatedExercise: Partial<Exercise>) => {
     try {
       await fetch(`/api/exercises/${updatedExercise.id}`, {
         method: 'PATCH',
@@ -87,60 +88,8 @@ export default function ExerciseList() {
     }
   };
 
-  const handleRandomSelection = () => {
-    if (exercises.length > 0) {
-      const totalDuration = exercises.reduce((acc, exercise) => {
-        const [minutes, seconds] = exercise.duration.split(':').map(Number);
-        return acc + minutes * 60 + seconds;
-      }, 0);
-
-      const targetDuration = totalDuration / 7;
-      let selectedDuration = 0;
-      const selected = [];
-      const shuffledExercises = [...exercises].sort(() => 0.5 - Math.random());
-
-      for (let i = 0; i < shuffledExercises.length; i++) {
-        const exercise = shuffledExercises[i];
-        const [minutes, seconds] = exercise.duration.split(':').map(Number);
-        const durationInSeconds = minutes * 60 + seconds;
-
-        if (selectedDuration + durationInSeconds <= targetDuration) {
-          selected.push(exercise.id);
-          selectedDuration += durationInSeconds;
-        }
-
-        if (selectedDuration >= targetDuration) break;
-      }
-
-      setSelectedIds(selected);
-      setShowOnlySelected(true);
-    } else {
-      setNotification({
-        message: 'No exercises available',
-        type: 'error',
-      });
-    }
-  };
-
-  const handleClearSelection = () => {
-    setSelectedIds([]);
-    setShowOnlySelected(false);
-  };
-
-  const handleStartExercise = () => {
-    if (selectedIds.length > 0) {
-      const selectedExercises = exercises.filter((exercise) =>
-        selectedIds.includes(exercise.id)
-      );
-      router.push(
-        `/exercises/workout?exercises=${JSON.stringify(selectedExercises)}`
-      );
-    } else {
-      setNotification({
-        message: 'No exercises selected',
-        type: 'error',
-      });
-    }
+  const handleAddExercise = () => {
+    setIsAddModalOpen(true);
   };
 
   const columns: ColumnDef<Exercise>[] = [
@@ -158,6 +107,7 @@ export default function ExerciseList() {
       header: 'Duration',
       cell: ({ row }) => row.original.duration,
       headerClassName: 'w-2/12',
+      cellClassName: 'text-xs text-center',
     },
     {
       accessorKey: 'description',
@@ -172,6 +122,7 @@ export default function ExerciseList() {
           </button>
         ) : null,
       headerClassName: 'w-1/12',
+      cellClassName: 'text-center',
     },
   ];
 
@@ -181,22 +132,14 @@ export default function ExerciseList() {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={handleRandomSelection}>
-            <Shuffle className="w-4 h-4 mr-2" /> Random
-          </Button>
-          <Button variant="outline" onClick={handleClearSelection}>
-            Clear Selection
-          </Button>
-          <Button variant="outline" onClick={handleStartExercise}>
-            <PlayCircle className="w-4 h-4 mr-2" /> Start Exercise
-          </Button>
-        </div>
-        <Button variant="outline" onClick={() => setIsAddModalOpen(true)}>
-          Add Exercise
-        </Button>
-      </div>
+      <ExerciseActions
+        exercises={exercises}
+        selectedIds={selectedIds}
+        setSelectedIds={setSelectedIds}
+        setShowOnlySelected={setShowOnlySelected}
+        setNotification={setNotification}
+        onAddExercise={handleAddExercise}
+      />
       <DataTable
         columns={columns}
         data={filteredExercises}
@@ -214,17 +157,19 @@ export default function ExerciseList() {
         onSelectChange={setSelectedIds}
       />
 
-      <AddExerciseModal
+      <ExerciseModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onExerciseAdded={addExercise}
+        onSubmit={addExercise}
+        mode="add"
       />
 
-      <EditExerciseModal
+      <ExerciseModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         exercise={editingExercise}
-        onExerciseUpdated={handleEditSubmit}
+        onSubmit={handleEditSubmit}
+        mode="edit"
       />
 
       {notification && (
