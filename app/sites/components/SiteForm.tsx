@@ -23,12 +23,8 @@ interface SiteFormProps {
   languages: SiteLanguages[];
   onSubmit: (siteData: Partial<Site>) => void;
   onCancel: () => void;
-  onAddCategory: (name: string) => void;
-  onAddLanguage: (name: string) => void;
-  onDeleteCategory: (id: number) => void;
-  onDeleteLanguage: (id: number) => void;
-  onEditCategory: (id: number, newName: string) => void;
-  onEditLanguage: (id: number, newName: string) => void;
+  onCategoriesChange: (categories: SiteCategories[]) => void;
+  onLanguagesChange: (languages: SiteLanguages[]) => void;
 }
 
 interface Site {
@@ -55,12 +51,8 @@ export function SiteForm({
   languages,
   onSubmit,
   onCancel,
-  onAddCategory,
-  onAddLanguage,
-  onDeleteCategory,
-  onDeleteLanguage,
-  onEditCategory,
-  onEditLanguage,
+  onCategoriesChange,
+  onLanguagesChange,
 }: SiteFormProps) {
   const [formData, setFormData] = useState<Partial<Site>>({
     domainName: '',
@@ -68,8 +60,6 @@ export function SiteForm({
     categoryIds: [],
     languageIds: [],
   });
-  const [newCategory, setNewCategory] = useState('');
-  const [newLanguage, setNewLanguage] = useState('');
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [isLanguageDialogOpen, setIsLanguageDialogOpen] = useState(false);
 
@@ -108,16 +98,80 @@ export function SiteForm({
     onSubmit(formData);
   };
 
-  const handleAddCategory = () => {
-    onAddCategory(newCategory);
-    setNewCategory('');
-    setIsCategoryDialogOpen(false);
+  const handleAddCategory = async (name: string) => {
+    const response = await fetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const newCategory = await response.json();
+    onCategoriesChange([...categories, newCategory]);
   };
 
-  const handleAddLanguage = () => {
-    onAddLanguage(newLanguage);
-    setNewLanguage('');
-    setIsLanguageDialogOpen(false);
+  const handleAddLanguage = async (name: string) => {
+    const response = await fetch('/api/languages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const newLanguage = await response.json();
+    onLanguagesChange([...languages, newLanguage]);
+  };
+
+  const handleDeleteCategory = async (id: number) => {
+    try {
+      await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+      onCategoriesChange(categories.filter((category) => category.id !== id));
+    } catch (error) {
+      console.error('Error deleting category:', error);
+    }
+  };
+
+  const handleDeleteLanguage = async (id: number) => {
+    try {
+      await fetch(`/api/languages/${id}`, { method: 'DELETE' });
+      onLanguagesChange(languages.filter((language) => language.id !== id));
+    } catch (error) {
+      console.error('Error deleting language:', error);
+    }
+  };
+
+  const handleEditCategory = async (id: number, newName: string) => {
+    try {
+      const response = await fetch(`/api/categories/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName }),
+      });
+      if (response.ok) {
+        onCategoriesChange(
+          categories.map((category) =>
+            category.id === id ? { ...category, name: newName } : category
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error editing category:', error);
+    }
+  };
+
+  const handleEditLanguage = async (id: number, newName: string) => {
+    try {
+      const response = await fetch(`/api/languages/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName }),
+      });
+      if (response.ok) {
+        onLanguagesChange(
+          languages.map((language) =>
+            language.id === id ? { ...language, name: newName } : language
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error editing language:', error);
+    }
   };
 
   return (
@@ -178,9 +232,9 @@ export function SiteForm({
               </DialogHeader>
               <CategoryLanguageManager
                 items={categories}
-                onAdd={onAddCategory}
-                onDelete={onDeleteCategory}
-                onEdit={onEditCategory}
+                onAdd={handleAddCategory}
+                onDelete={handleDeleteCategory}
+                onEdit={handleEditCategory}
                 type="category"
               />
             </DialogContent>
@@ -226,9 +280,9 @@ export function SiteForm({
               </DialogHeader>
               <CategoryLanguageManager
                 items={languages}
-                onAdd={onAddLanguage}
-                onDelete={onDeleteLanguage}
-                onEdit={onEditLanguage}
+                onAdd={handleAddLanguage}
+                onDelete={handleDeleteLanguage}
+                onEdit={handleEditLanguage}
                 type="language"
               />
             </DialogContent>

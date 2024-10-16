@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { TableComponent } from '@/components/TableComponent';
-import { Button } from '@/components/ui/button';
-import { Plus, Check, FileText, ArrowRight } from 'lucide-react';
 import { TodoDialog } from './TodoModal';
-import Link from 'next/link';
+import { TodoActions } from './TodoActions';
+import { BlogDomains } from './BlogDomains';
+import { Check, FileText } from 'lucide-react';
 import {
   format,
   parseISO,
@@ -13,45 +13,16 @@ import {
   isYesterday,
   isTomorrow,
   addDays,
+  isBefore,
+  startOfDay,
 } from 'date-fns';
-
-// New component for blog domains
-const BlogDomains = ({ title }) => {
-  const [domains, setDomains] = useState([]);
-
-  useEffect(() => {
-    const fetchDomains = async () => {
-      const response = await fetch(
-        `/api/todos/blog-domains?category=${encodeURIComponent(title)}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setDomains(data);
-      }
-    };
-    fetchDomains();
-  }, [title]);
-
-  return (
-    <div className="flex space-x-1 items-center">
-      {domains.map((domain, index) => (
-        <Link
-          key={index}
-          href={`/sites/${domain}`}
-          className="flex items-center space-x-1 text-black"
-        >
-          <ArrowRight className="w-4 h-4" />
-        </Link>
-      ))}
-    </div>
-  );
-};
 
 export default function TodoList() {
   const [todos, setTodos] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState(null);
   const [expandedNotes, setExpandedNotes] = useState<number[]>([]);
+  const [showFutureTodos, setShowFutureTodos] = useState(false);
 
   useEffect(() => {
     fetchTodos();
@@ -95,7 +66,7 @@ export default function TodoList() {
     if (isToday(date)) return 'Today';
     if (isYesterday(date)) return 'Yesterday';
     if (isTomorrow(date)) return 'Tomorrow';
-    return format(date, 'MMMM d, yyyy');
+    return format(date, 'd.MM.yyyy');
   };
 
   const handleCheckClick = async (id) => {
@@ -207,7 +178,7 @@ export default function TodoList() {
       {
         Header: 'Date',
         accessor: 'date',
-        Cell: ({ value }) => format(parseISO(value), 'dd/MM/yyyy'),
+        Cell: ({ value }) => format(parseISO(value), 'd.MM.yyyy'),
         className: 'w-2/12 text-xs text-center',
       },
       {
@@ -267,14 +238,28 @@ export default function TodoList() {
     []
   );
 
+  const filteredTodos = useMemo(() => {
+    if (showFutureTodos) {
+      return todos;
+    }
+    const dayAfterTomorrow = addDays(startOfDay(new Date()), 2);
+    return todos.filter((group) =>
+      isBefore(parseISO(group.date), dayAfterTomorrow)
+    );
+  }, [todos, showFutureTodos]);
+
+  const toggleFutureTodos = () => {
+    setShowFutureTodos(!showFutureTodos);
+  };
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <Button variant="outline" onClick={handleAddTodo}>
-          Add Todo
-        </Button>
-      </div>
-      {todos.map((group) => (
+      <TodoActions
+        onAddTodo={handleAddTodo}
+        showFutureTodos={showFutureTodos}
+        onToggleFutureTodos={toggleFutureTodos}
+      />
+      {filteredTodos.map((group) => (
         <div key={group.date} className="mb-8">
           <h2 className="text-sm font-semibold mb-3">
             {formatGroupDate(group.date)}

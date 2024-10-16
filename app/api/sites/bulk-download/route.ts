@@ -9,7 +9,7 @@ interface SiteToDownload {
 }
 
 export async function POST(request: Request) {
-  const { sites } = await request.json();
+  const { sites, concurrency = 4 } = await request.json();
 
   if (!Array.isArray(sites) || sites.length === 0) {
     return NextResponse.json(
@@ -28,24 +28,51 @@ export async function POST(request: Request) {
 
   (async () => {
     try {
-      await sendStatus(`Starting bulk download for ${sites.length} sites`);
-      for (const site of sites) {
-        try {
-          await sendStatus(`Starting download for ${site.domainName}`);
-          const filePath = await downloadReport({
+      await sendStatus(
+        `Starting bulk download for ${sites.length} sites with concurrency ${concurrency}`
+      );
+
+      const queue = [...sites];
+      const activeDownloads = new Set();
+      const results = [];
+
+      while (queue.length > 0 || activeDownloads.size > 0) {
+        while (activeDownloads.size < concurrency && queue.length > 0) {
+          const site = queue.shift();
+          const downloadPromise = downloadReport({
             domainName: site.domainName,
             language: site.language,
             monthlyVisitors: site.monthlyVisitors,
             onProgress: (message) =>
               sendStatus(`${site.domainName}: ${message}`),
-          });
+          })
+            .then((filePath) => {
+              activeDownloads.delete(downloadPromise);
+              return { domainName: site.domainName, filePath };
+            })
+            .catch((error) => {
+              activeDownloads.delete(downloadPromise);
+              return { domainName: site.domainName, error: error.message };
+            });
+
+          activeDownloads.add(downloadPromise);
+          results.push(downloadPromise);
+        }
+
+        if (activeDownloads.size > 0) {
+          await Promise.race(activeDownloads);
+        }
+      }
+
+      const finalResults = await Promise.all(results);
+      for (const result of finalResults) {
+        if (result.error) {
           await sendStatus(
-            `Completed download for ${site.domainName}: ${filePath}`
+            `Error processing ${result.domainName}: ${result.error}`
           );
-        } catch (error) {
-          console.error(`Error processing ${site.domainName}:`, error);
+        } else {
           await sendStatus(
-            `Error processing ${site.domainName}: ${error.message}`
+            `Completed download for ${result.domainName}: ${result.filePath}`
           );
         }
       }

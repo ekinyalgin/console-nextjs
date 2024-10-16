@@ -9,6 +9,7 @@ interface TableComponentProps<T extends object> {
   keyField: string;
   selectedIds?: number[];
   onSelectChange?: (id: number) => void;
+  onSelectAll?: (isSelected: boolean) => void;
   onEdit?: (item: T) => void;
   onDelete?: (id: number) => void;
   onDescriptionToggle?: (id: number) => void;
@@ -24,6 +25,7 @@ export function TableComponent<T extends object>({
   keyField,
   selectedIds = [],
   onSelectChange,
+  onSelectAll,
   onEdit,
   onDelete,
   onDescriptionToggle,
@@ -49,11 +51,21 @@ export function TableComponent<T extends object>({
     setDeleteConfirmation(null);
   };
 
+  const isAllSelected = data.length > 0 && selectedIds.length === data.length;
+
   return (
     <table className="shadow-sm rounded min-w-full bg-white">
       <thead className="bg-gray-50 text-xs uppercase h-10 text-gray-600">
         <tr>
-          {onSelectChange && <th className="w-1/12 px-4 py-2">Select</th>}
+          {onSelectChange && onSelectAll && (
+            <th className="w-1/12 px-4 py-2 font-normal">
+              <input
+                type="checkbox"
+                checked={isAllSelected}
+                onChange={(e) => onSelectAll(e.target.checked)}
+              />
+            </th>
+          )}
           {columns.map((column, index) => (
             <th
               key={index}
@@ -74,7 +86,7 @@ export function TableComponent<T extends object>({
           <React.Fragment key={item[keyField] as React.Key}>
             <tr className="border-t border-gray-100 hover:bg-gray-50">
               {onSelectChange && (
-                <td className="px-4 py-2 0">
+                <td className="px-4 py-2 text-center">
                   <input
                     type="checkbox"
                     checked={selectedIds.includes(item[keyField] as number)}
@@ -85,7 +97,7 @@ export function TableComponent<T extends object>({
               {columns.map((column, index) => (
                 <td
                   key={index}
-                  className={`px-4 py-2 ${column.className || ''}`}
+                  className={`px-4 py-2 text-center text-sm ${column.className || ''}`}
                 >
                   {column.Cell
                     ? column.Cell({

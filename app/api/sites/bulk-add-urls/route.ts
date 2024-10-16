@@ -18,6 +18,7 @@ export async function POST(request: Request) {
     const reportsDir = path.join(process.cwd(), 'public', 'reports');
     let totalNewUrls = 0;
     let processedSites = 0;
+    let errors = [];
 
     for (const domainName of domains) {
       const site = await prisma.site.findUnique({
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
 
       if (!site) {
         console.log(`Site not found for domain: ${domainName}`);
+        errors.push(`Site not found for domain: ${domainName}`);
         continue;
       }
 
@@ -33,29 +35,29 @@ export async function POST(request: Request) {
       console.log(`Processing file: ${excelPath}`);
 
       try {
-        // Dosya erişimini kontrol et
-        await fs.access(excelPath, fs.constants.R_OK | fs.constants.W_OK);
-        console.log(`File access successful for ${excelPath}`);
+        // Dosya varlığını kontrol et
+        const fileStats = await fs.stat(excelPath);
+        console.log(
+          `File exists: ${fileStats.isFile()}, Size: ${fileStats.size} bytes`
+        );
 
         // Excel dosyasını oku
-        const workbook = xlsx.readFile(excelPath);
+        const workbook = xlsx.readFile(excelPath, { type: 'file' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const data = xlsx.utils.sheet_to_json(sheet);
-        console.log(`Read ${data.length} rows from Excel file`);
+        console.log(
+          `Read ${data.length} rows from Excel file for ${domainName}`
+        );
 
         const urls = data.map((row: any) => row.URL || row.url).filter(Boolean);
 
-        // Mevcut URL'leri al
         const existingUrls = await prisma.uRL.findMany({
           where: { siteId: site.id },
           select: { url: true },
         });
         const existingUrlSet = new Set(existingUrls.map((u) => u.url));
-        console.log(`Found ${existingUrls.length} existing URLs in database`);
 
-        // Yeni URL'leri filtrele ve ekle
         const newUrls = urls.filter((url) => !existingUrlSet.has(url));
-        console.log(`Filtered ${newUrls.length} new URLs to add`);
 
         if (newUrls.length > 0) {
           const createdUrls = await prisma.uRL.createMany({
@@ -65,7 +67,6 @@ export async function POST(request: Request) {
               reviewed: false,
             })),
           });
-          console.log(`Added ${createdUrls.count} new URLs to database`);
           totalNewUrls += createdUrls.count;
         }
 
@@ -75,18 +76,19 @@ export async function POST(request: Request) {
         );
       } catch (error) {
         console.error(`Error processing ${domainName}:`, error);
-        // Hata durumunda bu siteyi atla ve bir sonrakine geç
+        errors.push(`Error processing ${domainName}: ${error.message}`);
         continue;
       }
     }
 
     return NextResponse.json({
-      message: `Bulk add completed. Added ${totalNewUrls} new URLs across ${processedSites} sites.`,
+      message: `Added ${totalNewUrls} new URLs across ${processedSites} sites.`,
+      errors: errors.length > 0 ? errors : undefined,
     });
   } catch (error) {
-    console.error('Error during bulk add:', error);
+    console.error('Error during bulk URL add:', error);
     return NextResponse.json(
-      { error: 'Error during bulk add' },
+      { error: 'Error during bulk URL add', details: error.message },
       { status: 500 }
     );
   }

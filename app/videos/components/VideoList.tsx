@@ -7,7 +7,7 @@ import React, {
   useReducer,
   useState,
 } from 'react';
-import { Check, ExternalLink, StickyNote } from 'lucide-react';
+import { Check, ExternalLink, FileText } from 'lucide-react';
 import { Video } from '@prisma/client';
 import { TableComponent } from '@/components/TableComponent';
 import Notification from '@/components/Notification';
@@ -265,6 +265,7 @@ export default function VideoList() {
           </a>
         ),
         className: 'text-left w-8/12',
+        headerClassName: 'text-left',
       },
       {
         Header: 'Note',
@@ -275,7 +276,7 @@ export default function VideoList() {
               onClick={() => toggleNoteExpansion(row.original.id)}
               className="flex justify-center items-center w-full"
             >
-              <StickyNote className="w-4 h-4 text-gray-600" />
+              <FileText className="w-4 h-4 text-gray-600" />
             </button>
           ) : null,
         className: 'w-1/12',

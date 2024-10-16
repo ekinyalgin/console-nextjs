@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { StickyNote } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { Exercise } from '@prisma/client';
 import { Button } from '@/components/ui/button';
 import Notification from '@/components/Notification';
@@ -114,15 +114,16 @@ export default function ExerciseList() {
       {
         Header: 'Title',
         accessor: 'title',
-        className: 'w-7/12 text-left font-semibold',
+        headerClassName: 'text-left',
+        className: 'w-7/12 !text-left text-sm font-semibold',
       },
       {
         Header: 'Duration',
         accessor: 'duration',
-        className: 'w-2/12 text-center',
+        className: 'w-2/12 text-xs text-center',
       },
       {
-        Header: 'Description',
+        Header: 'Desc',
         accessor: 'description',
         className: 'w-1/12 text-center',
         Cell: ({ row }) =>
@@ -131,7 +132,7 @@ export default function ExerciseList() {
               onClick={() => toggleDescriptionExpansion(row.original.id)}
               className="text-blue-600 hover:text-blue-800"
             >
-              <StickyNote className="w-4 h-4 text-gray-600" />
+              <FileText className="w-4 h-4 text-gray-600" />
             </button>
           ) : null,
       },

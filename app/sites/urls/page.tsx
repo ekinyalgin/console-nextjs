@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { TableComponent } from '@/components/TableComponent';
+import { Column } from 'react-table';
+import { Button } from '@/components/ui/button';
+import { Check } from 'lucide-react';
 
 interface URL {
   id: number;
@@ -57,41 +61,39 @@ const URLsPage = () => {
     }
   };
 
-  const NotReviewedURLs = () => (
-    <div>
-      <h2>Not Reviewed</h2>
-      <ul>
-        {urls
-          .filter((url) => !url.reviewed)
-          .map((url) => (
-            <li key={url.id}>
-              {url.url}
-              <button onClick={() => handleReview(url.id)}>✓</button>
-            </li>
-          ))}
-      </ul>
-    </div>
-  );
-
-  const ReviewedURLs = () => (
-    <div>
-      <h2>Reviewed</h2>
-      <ul>
-        {urls
-          .filter((url) => url.reviewed)
-          .map((url) => (
-            <li key={url.id}>{url.url}</li>
-          ))}
-      </ul>
-    </div>
-  );
+  const columns: Column<URL>[] = [
+    {
+      Header: 'URL',
+      accessor: 'url',
+    },
+    {
+      Header: 'Status',
+      accessor: 'reviewed',
+      Cell: ({ value }) => (value ? 'Reviewed' : 'Not Reviewed'),
+    },
+    {
+      Header: 'Action',
+      id: 'action',
+      Cell: ({ row }) => (
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => handleReview(row.original.id)}
+          disabled={row.original.reviewed}
+        >
+          <Check className="h-4 w-4" />
+        </Button>
+      ),
+    },
+  ];
 
   return (
-    <div>
-      <h1>URLs for {domain}</h1>
-      <button onClick={loadURLsFromExcel}>Load URLs from Excel</button>
-      <NotReviewedURLs />
-      <ReviewedURLs />
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">URLs for {domain}</h1>
+      <Button onClick={loadURLsFromExcel} className="mb-4">
+        Load URLs from Excel
+      </Button>
+      <TableComponent columns={columns} data={urls} keyField="id" />
     </div>
   );
 };

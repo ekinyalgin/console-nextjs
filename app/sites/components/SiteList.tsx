@@ -1,17 +1,24 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { DataTable } from '@/components/DataTable';
-import { ColumnDef } from '@tanstack/react-table';
-import { Button } from '@/components/ui/button';
-import { Download, FileDown, Trash } from 'lucide-react';
-import Link from 'next/link';
+'use client';
 
-interface SiteListProps {
-  sites: Site[];
-  onEdit: (site: Site) => void;
-  onDelete: (id: number) => void;
-  onSelect: (selectedItems: number[]) => void;
-  selectedItems: number[];
-}
+import React, { useState, useEffect, useCallback } from 'react';
+import { TableComponent } from '@/components/TableComponent';
+import { Column } from 'react-table';
+import { Button } from '@/components/ui/button';
+import { Download, FileDown, Trash, Settings } from 'lucide-react';
+import Link from 'next/link';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { SiteForm } from './SiteForm';
+import { BulkUpdateVisitors } from './BulkUpdateVisitors';
+import Notification from '@/components/Notification';
+import { Checkbox } from '@/components/ui/checkbox';
+import { CategoryTabs } from './CategoryTabs';
+import { BulkDownloadReports } from './BulkDownloadReports';
 
 interface Site {
   id: number;
@@ -21,49 +28,156 @@ interface Site {
   languages: { language: { id: number; name: string } }[];
 }
 
-export function SiteList({
-  sites,
-  onEdit,
-  onDelete,
-  onSelect,
-  selectedItems,
-}: SiteListProps) {
+interface SiteCategories {
+  id: number;
+  name: string;
+}
+
+interface SiteLanguages {
+  id: number;
+  name: string;
+}
+
+export default function SiteList() {
+  const [sites, setSites] = useState<Site[]>([]);
+  const [categories, setCategories] = useState<SiteCategories[]>([]);
+  const [languages, setLanguages] = useState<SiteLanguages[]>([]);
+  const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [downloadStatus, setDownloadStatus] = useState<{
     [key: string]: string;
   }>({});
   const [siteStatuses, setSiteStatuses] = useState<{
     [key: string]: { hasExcel: boolean; hasNotReviewedUrls: boolean };
   }>({});
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingSite, setEditingSite] = useState<Site | null>(null);
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: 'success' | 'error';
+  } | null>(null);
+  const [isBulkUpdateVisible, setIsBulkUpdateVisible] =
+    useState<boolean>(false);
+  const [activeCategory, setActiveCategory] = useState<number | null>(null);
+  const [selectAll, setSelectAll] = useState(false);
 
-  const checkSiteStatus = useCallback(async (domainName: string) => {
-    try {
-      const excelResponse = await fetch(
-        `/api/sites/check-excel?domain=${domainName}`
-      );
-      const excelData = await excelResponse.json();
-
-      const urlsResponse = await fetch(
-        `/api/sites/${domainName}/urls?reviewed=false`
-      );
-      const urlsData = await urlsResponse.json();
-
-      setSiteStatuses((prev) => ({
-        ...prev,
-        [domainName]: {
-          hasExcel: excelData.exists,
-          hasNotReviewedUrls: urlsData.length > 0,
-        },
-      }));
-    } catch (error) {
-      console.error('Error checking site status:', error);
+  useEffect(() => {
+    fetchSites();
+    fetchCategories();
+    fetchLanguages();
+    const savedCategory = localStorage.getItem('activeCategory');
+    if (savedCategory) {
+      setActiveCategory(Number(savedCategory));
     }
   }, []);
 
   useEffect(() => {
-    sites.forEach((site) => {
-      checkSiteStatus(site.domainName);
+    if (activeCategory !== null) {
+      localStorage.setItem('activeCategory', activeCategory.toString());
+    }
+  }, [activeCategory]);
+
+  const fetchSites = async () => {
+    const response = await fetch('/api/sites');
+    const data = await response.json();
+    setSites(data);
+  };
+
+  const fetchCategories = async () => {
+    const response = await fetch('/api/categories');
+    const data = await response.json();
+    setCategories(data);
+    if (data.length > 0 && !activeCategory) {
+      setActiveCategory(data[0].id);
+    }
+  };
+
+  const fetchLanguages = async () => {
+    const response = await fetch('/api/languages');
+    const data = await response.json();
+    setLanguages(data);
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      const response = await fetch(`/api/sites/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        setSites(sites.filter((site) => site.id !== id));
+        handleNotification('Site deleted successfully', 'success');
+      } else {
+        handleNotification('Failed to delete site', 'error');
+      }
+    } catch (error) {
+      console.error('Error deleting site:', error);
+      handleNotification('Error deleting site', 'error');
+    }
+  };
+
+  const handleSelectChange = (id: number) => {
+    setSelectedItems((prevSelected) =>
+      prevSelected.includes(id)
+        ? prevSelected.filter((item) => item !== id)
+        : [...prevSelected, id]
+    );
+  };
+
+  const showDialog = (site?: Site) => {
+    setEditingSite(site || null);
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = async (siteData: Partial<Site>) => {
+    try {
+      if (editingSite) {
+        await fetch(`/api/sites/${editingSite.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(siteData),
+        });
+      } else {
+        await fetch('/api/sites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(siteData),
+        });
+      }
+      setIsDialogOpen(false);
+      fetchSites();
+      handleNotification(
+        `Site ${editingSite ? 'updated' : 'added'} successfully`,
+        'success'
+      );
+    } catch (error) {
+      console.error('Error submitting site:', error);
+      handleNotification(
+        `Error ${editingSite ? 'updating' : 'adding'} site`,
+        'error'
+      );
+    }
+  };
+
+  const handleNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  const handleBulkUpdate = (updatedSites: Site[]) => {
+    setSites((prevSites) => {
+      const updatedSiteMap = new Map(
+        updatedSites.map((site) => [site.id, site])
+      );
+      return prevSites.map((site) => updatedSiteMap.get(site.id) || site);
     });
-  }, [sites, checkSiteStatus]);
+  };
+
+  const toggleBulkUpdate = () => {
+    setIsBulkUpdateVisible(!isBulkUpdateVisible);
+  };
+
+  const filterSitesByCategory = (categoryId: number) => {
+    return sites.filter((site) =>
+      site.categories.some((c) => c.category.id === categoryId)
+    );
+  };
 
   const handleDownload = async (domainName: string) => {
     try {
@@ -119,104 +233,61 @@ export function SiteList({
     }
   };
 
-  const handleBulkDownload = async () => {
+  const checkSiteStatus = useCallback(async (domainName: string) => {
     try {
-      setDownloadStatus({ bulk: 'Starting bulk download...' });
-      const selectedDomains = sites
-        .filter((site) => selectedItems.includes(site.id))
-        .map((site) => ({
-          domainName: site.domainName,
-          language: site.languages[0]?.language.name.toLowerCase() || 'en',
-          monthlyVisitors: site.monthly,
-        }));
+      const [excelResponse, urlsResponse] = await Promise.all([
+        fetch(`/api/sites/check-excel?domain=${domainName}`),
+        fetch(`/api/sites/${domainName}/urls?reviewed=false`),
+      ]);
 
-      if (selectedDomains.length === 0) {
-        setDownloadStatus({ bulk: 'No domains selected for download.' });
-        return;
-      }
+      const excelData = await excelResponse.json();
+      const urlsData = await urlsResponse.json();
 
-      console.log('Selected domains:', selectedDomains); // Debug için
-
-      const response = await fetch('/api/sites/bulk-download', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sites: selectedDomains }),
-      });
-
-      if (response.ok) {
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
-
-        while (true) {
-          const { done, value } = await reader!.read();
-          if (done) break;
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-          for (const line of lines) {
-            if (line) {
-              try {
-                const data = JSON.parse(line);
-                if (data.status) {
-                  setDownloadStatus((prev) => ({ ...prev, bulk: data.status }));
-                }
-              } catch (e) {
-                console.error('Error parsing chunk:', e);
-              }
-            }
-          }
-        }
-
-        setDownloadStatus((prev) => ({
-          ...prev,
-          bulk: 'Bulk download completed',
-        }));
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to start bulk download');
-      }
-    } catch (error) {
-      console.error('Error during bulk download:', error);
-      setDownloadStatus((prev) => ({
+      setSiteStatuses((prev) => ({
         ...prev,
-        bulk: `Error: ${error.message}`,
+        [domainName]: {
+          hasExcel: excelData.exists,
+          hasNotReviewedUrls: urlsData.length > 0,
+        },
       }));
-    }
-  };
-
-  const handleBulkAddAndDelete = async () => {
-    try {
-      setDownloadStatus({ bulkAdd: 'Starting bulk add and delete...' });
-      const response = await fetch('/api/sites/bulk-add-and-delete', {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        setDownloadStatus({ bulkAdd: 'Bulk add and delete completed' });
-        // Refresh site statuses
-        sites.forEach((site) => checkSiteStatus(site.domainName));
-      } else {
-        throw new Error('Failed to start bulk add and delete');
-      }
     } catch (error) {
-      console.error('Error starting bulk add and delete:', error);
-      setDownloadStatus({ bulkAdd: 'Error during bulk add and delete' });
+      console.error(`Error checking status for ${domainName}:`, error);
+    }
+  }, []);
+
+  useEffect(() => {
+    sites.forEach((site) => checkSiteStatus(site.domainName));
+  }, [sites, checkSiteStatus]);
+
+  const handleCategoryChange = (categoryId: number) => {
+    setActiveCategory(categoryId);
+    setSelectedItems([]);
+    setSelectAll(false);
+  };
+
+  const handleSelectAllChange = (checked: boolean) => {
+    setSelectAll(checked);
+    if (checked) {
+      const filteredSites = activeCategory
+        ? filterSitesByCategory(activeCategory)
+        : sites;
+      setSelectedItems(filteredSites.map((site) => site.id));
+    } else {
+      setSelectedItems([]);
     }
   };
 
-  const handleSelectChange = (newSelectedItems: number[]) => {
-    console.log('Selected Items:', newSelectedItems);
-    onSelect(newSelectedItems);
-  };
-
-  const columns: ColumnDef<Site>[] = [
+  const columns: Column<Site>[] = [
     {
-      accessorKey: 'domainName',
-      header: 'Domain Name',
-      cell: ({ row }) => (
+      Header: 'Domain',
+      accessor: 'domainName',
+      headerClassName: 'text-left',
+      className: 'text-sm !text-left font-semibold',
+      Cell: ({ row }) => (
         <div>
           <Link
             href={`/sites/${row.original.domainName}`}
-            className={` hover:underline ${
+            className={`hover:underline ${
               siteStatuses[row.original.domainName]?.hasNotReviewedUrls
                 ? 'text-blue-600 underline'
                 : siteStatuses[row.original.domainName]?.hasExcel
@@ -233,28 +304,25 @@ export function SiteList({
           )}
         </div>
       ),
-      headerClassName: 'w-5/12 text-left',
-      cellClassName: 'text-left font-semibold',
     },
     {
-      accessorKey: 'monthly',
-      header: 'Monthly',
-      cellClassName: 'text-xs text-center tracking-wider',
+      Header: 'Monthly',
+      accessor: 'monthly',
+      headerClassName: 'w-1/2',
     },
     {
-      accessorKey: 'languages',
-      header: 'Languages',
-      cell: ({ row }) => (
+      Header: 'Languages',
+      accessor: 'languages',
+      Cell: ({ row }) => (
         <div>
           {row.original.languages.map((l) => l.language.name).join(', ')}
         </div>
       ),
-      cellClassName: 'text-xs text-center tracking-wider',
     },
     {
+      Header: 'DL',
       id: 'download',
-      header: 'DL',
-      cell: ({ row }) => (
+      Cell: ({ row }) => (
         <Button
           size="sm"
           variant="ghost"
@@ -263,40 +331,81 @@ export function SiteList({
           <Download className="h-4 w-4" />
         </Button>
       ),
-      cellClassName: 'text-center',
     },
   ];
 
   return (
     <>
-      <DataTable
-        columns={columns}
-        data={sites}
-        keyField="id"
-        onEdit={onEdit}
-        onDelete={onDelete}
-        selectable={true}
-        selectedItems={selectedItems}
-        onSelectChange={handleSelectChange}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogTrigger asChild>
+          <Button
+            variant="outline"
+            onClick={() => showDialog()}
+            className="mb-4"
+          >
+            Add Site
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingSite ? 'Edit Site' : 'Add Site'}</DialogTitle>
+          </DialogHeader>
+          <SiteForm
+            site={editingSite || undefined}
+            categories={categories}
+            languages={languages}
+            onSubmit={handleSubmit}
+            onCancel={() => setIsDialogOpen(false)}
+            onCategoriesChange={setCategories}
+            onLanguagesChange={setLanguages}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <CategoryTabs
+        categories={categories}
+        activeCategory={activeCategory}
+        onCategoryChange={handleCategoryChange}
+        onBulkUpdateToggle={toggleBulkUpdate}
       />
-      <div className="mt-4 space-x-2">
-        <Button
-          onClick={handleBulkDownload}
-          disabled={selectedItems.length === 0}
-        >
-          <FileDown className="mr-2 h-4 w-4" />
-          Download Selected Reports ({selectedItems.length})
-        </Button>
-        <Button onClick={handleBulkAddAndDelete}>
-          <Trash className="mr-2 h-4 w-4" />
-          Add URLs and Delete Excel Files
-        </Button>
-      </div>
-      {downloadStatus.bulk && (
-        <p className="mt-2 text-sm">{downloadStatus.bulk}</p>
+
+      {isBulkUpdateVisible && activeCategory && (
+        <BulkUpdateVisitors
+          activeCategory={activeCategory}
+          onNotification={handleNotification}
+          onBulkUpdate={handleBulkUpdate}
+        />
       )}
-      {downloadStatus.bulkAdd && (
-        <p className="mt-2 text-sm">{downloadStatus.bulkAdd}</p>
+
+      <TableComponent
+        columns={columns}
+        data={
+          activeCategory
+            ? filterSitesByCategory(activeCategory).sort(
+                (a, b) => b.monthly - a.monthly
+              )
+            : sites
+        }
+        keyField="id"
+        onEdit={showDialog}
+        onDelete={handleDelete}
+        selectedIds={selectedItems}
+        onSelectChange={handleSelectChange}
+        onSelectAll={handleSelectAllChange}
+      />
+
+      <BulkDownloadReports
+        selectedItems={selectedItems}
+        sites={sites}
+        siteStatuses={siteStatuses}
+      />
+
+      {notification && (
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
       )}
     </>
   );
