@@ -1,9 +1,26 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const categoryId = searchParams.get('categoryId');
+
+  if (!categoryId) {
+    return NextResponse.json(
+      { error: 'Category ID is required' },
+      { status: 400 }
+    );
+  }
+
   try {
     const sites = await prisma.site.findMany({
+      where: {
+        categories: {
+          some: {
+            categoryId: parseInt(categoryId),
+          },
+        },
+      },
       include: {
         categories: {
           include: {
@@ -35,7 +52,7 @@ export async function POST(request: Request) {
     const site = await prisma.site.create({
       data: {
         domainName,
-        monthly: parseInt(monthly), // monthly'yi sayıya çeviriyoruz
+        monthly: parseInt(monthly),
         categories: {
           create: categoryIds.map((categoryId: number) => ({
             category: {

@@ -61,7 +61,6 @@ export default function SiteList() {
   const [selectAll, setSelectAll] = useState(false);
 
   useEffect(() => {
-    fetchSites();
     fetchCategories();
     fetchLanguages();
     const savedCategory = localStorage.getItem('activeCategory');
@@ -73,11 +72,12 @@ export default function SiteList() {
   useEffect(() => {
     if (activeCategory !== null) {
       localStorage.setItem('activeCategory', activeCategory.toString());
+      fetchSites(activeCategory);
     }
   }, [activeCategory]);
 
-  const fetchSites = async () => {
-    const response = await fetch('/api/sites');
+  const fetchSites = async (categoryId: number) => {
+    const response = await fetch(`/api/sites?categoryId=${categoryId}`);
     const data = await response.json();
     setSites(data);
   };
@@ -99,7 +99,9 @@ export default function SiteList() {
 
   const handleDelete = async (id: number) => {
     try {
-      const response = await fetch(`/api/sites/${id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/sites/by-id/${id}`, {
+        method: 'DELETE',
+      });
       if (response.ok) {
         setSites(sites.filter((site) => site.id !== id));
         handleNotification('Site deleted successfully', 'success');
@@ -141,7 +143,7 @@ export default function SiteList() {
         });
       }
       setIsDialogOpen(false);
-      fetchSites();
+      fetchSites(activeCategory!);
       handleNotification(
         `Site ${editingSite ? 'updated' : 'added'} successfully`,
         'success'
@@ -263,6 +265,7 @@ export default function SiteList() {
     setActiveCategory(categoryId);
     setSelectedItems([]);
     setSelectAll(false);
+    fetchSites(categoryId);
   };
 
   const handleSelectAllChange = (checked: boolean) => {
@@ -283,27 +286,30 @@ export default function SiteList() {
       accessor: 'domainName',
       headerClassName: 'text-left',
       className: 'text-sm !text-left font-semibold',
-      Cell: ({ row }) => (
-        <div>
-          <Link
-            href={`/sites/${row.original.domainName}`}
-            className={`hover:underline ${
-              siteStatuses[row.original.domainName]?.hasNotReviewedUrls
-                ? 'text-blue-600 underline'
-                : siteStatuses[row.original.domainName]?.hasExcel
-                  ? ''
-                  : 'font-normal text-black'
-            }`}
-          >
-            {row.original.domainName}
-          </Link>
-          {downloadStatus[row.original.domainName] && (
-            <div className="text-xs text-gray-400 font-normal">
-              {downloadStatus[row.original.domainName]}
-            </div>
-          )}
-        </div>
-      ),
+      Cell: ({ row }) => {
+        const displayDomain = row.original.domainName.replace(/^www\./i, '');
+        return (
+          <div>
+            <Link
+              href={`/sites/${row.original.domainName}`}
+              className={`hover:underline ${
+                siteStatuses[row.original.domainName]?.hasNotReviewedUrls
+                  ? 'text-blue-600 underline'
+                  : siteStatuses[row.original.domainName]?.hasExcel
+                    ? ''
+                    : 'font-normal text-black'
+              }`}
+            >
+              {displayDomain}
+            </Link>
+            {downloadStatus[row.original.domainName] && (
+              <div className="text-xs text-gray-400 font-normal">
+                {downloadStatus[row.original.domainName]}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       Header: 'Monthly',
@@ -379,13 +385,7 @@ export default function SiteList() {
 
       <TableComponent
         columns={columns}
-        data={
-          activeCategory
-            ? filterSitesByCategory(activeCategory).sort(
-                (a, b) => b.monthly - a.monthly
-              )
-            : sites
-        }
+        data={sites.sort((a, b) => b.monthly - a.monthly)}
         keyField="id"
         onEdit={showDialog}
         onDelete={handleDelete}

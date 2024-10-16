@@ -172,7 +172,7 @@ export default function TodoList() {
       {
         Header: 'Title',
         accessor: 'title',
-        className: 'w-3/12 text-sm font-semibold h-10',
+        className: 'w-3/12 text-sm font-semibold h-10 !text-left',
         headerClassName: 'text-left',
       },
       {
