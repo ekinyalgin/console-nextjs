@@ -33,6 +33,8 @@ interface DataTableProps<TData, TValue> {
   onDelete?: (id: any) => void;
   showEditAction?: boolean;
   showDeleteAction?: boolean;
+  expandedRows?: number[];
+  renderSubComponent?: (props: { row: { original: TData } }) => React.ReactNode;
 }
 
 export function DataTable<TData, TValue>({
@@ -46,6 +48,8 @@ export function DataTable<TData, TValue>({
   onDelete,
   showEditAction = true,
   showDeleteAction = true,
+  expandedRows = [],
+  renderSubComponent,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
@@ -184,27 +188,40 @@ export function DataTable<TData, TValue>({
         <TableBody>
           {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                data-state={row.getIsSelected() && 'selected'}
-                className="hover:bg-gray-50"
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell
-                    key={cell.id}
-                    className={`h-10 px-4 ${
-                      cell.column.columnDef.cellClassName || ''
-                    }`}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
+              <>
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && 'selected'}
+                  className="hover:bg-gray-50"
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell
+                      key={cell.id}
+                      className={`h-10 px-4 ${
+                        cell.column.columnDef.cellClassName || ''
+                      }`}
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                {expandedRows.includes((row.original as any)[keyField]) &&
+                  renderSubComponent && (
+                    <TableRow>
+                      <TableCell colSpan={tableColumns.length} className="p-4">
+                        {renderSubComponent({ row })}
+                      </TableCell>
+                    </TableRow>
+                  )}
+              </>
             ))
           ) : (
             <TableRow>
               <TableCell
-                colSpan={columns.length + (selectable ? 1 : 0) + 1}
+                colSpan={tableColumns.length}
                 className="h-10 text-center"
               >
                 No results.

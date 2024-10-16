@@ -1,7 +1,6 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../api/auth/[...nextauth]/route';
 import VideoList from './components/VideoList';
-import AddVideoButton from './components/AddVideoButton';
 
 export default async function VideosPage() {
   const session = await getServerSession(authOptions);
