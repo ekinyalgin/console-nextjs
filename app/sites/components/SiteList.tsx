@@ -4,7 +4,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { TableComponent } from '@/components/TableComponent';
 import { Column } from 'react-table';
 import { Button } from '@/components/ui/button';
-import { Download, FileDown, Trash, Settings } from 'lucide-react';
+import {
+  Download,
+  FileDown,
+  Trash,
+  Settings,
+  Upload,
+  Loader2,
+} from 'lucide-react';
 import Link from 'next/link';
 import {
   Dialog,
@@ -19,6 +26,7 @@ import Notification from '@/components/Notification';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CategoryTabs } from './CategoryTabs';
 import { BulkDownloadReports } from './BulkDownloadReports';
+import ImportNewUrls from './ImportNewUrls';
 
 interface Site {
   id: number;
@@ -59,6 +67,9 @@ export default function SiteList() {
     useState<boolean>(false);
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [selectAll, setSelectAll] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importStatus, setImportStatus] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -77,9 +88,17 @@ export default function SiteList() {
   }, [activeCategory]);
 
   const fetchSites = async (categoryId: number) => {
-    const response = await fetch(`/api/sites?categoryId=${categoryId}`);
-    const data = await response.json();
-    setSites(data);
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/sites?categoryId=${categoryId}`);
+      const data = await response.json();
+      setSites(data);
+    } catch (error) {
+      console.error('Error fetching sites:', error);
+      handleNotification('Error fetching sites', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const fetchCategories = async () => {
@@ -340,6 +359,47 @@ export default function SiteList() {
     },
   ];
 
+  const handleImport = async () => {
+    setIsImporting(true);
+    setImportStatus('Starting import...');
+
+    try {
+      const response = await fetch('/api/sites/import-new-urls', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Import failed');
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No reader available');
+      }
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = new TextDecoder().decode(value);
+        const lines = chunk.split('\n');
+        lines.forEach((line) => {
+          if (line) {
+            const { status } = JSON.parse(line);
+            setImportStatus(status);
+          }
+        });
+      }
+
+      setImportStatus('Import completed successfully');
+      fetchSites(activeCategory!);
+    } catch (error) {
+      console.error('Error during import:', error);
+      setImportStatus('Error during import');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   return (
     <>
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -373,6 +433,7 @@ export default function SiteList() {
         activeCategory={activeCategory}
         onCategoryChange={handleCategoryChange}
         onBulkUpdateToggle={toggleBulkUpdate}
+        isLoading={isLoading}
       />
 
       {isBulkUpdateVisible && activeCategory && (
@@ -383,23 +444,38 @@ export default function SiteList() {
         />
       )}
 
-      <TableComponent
-        columns={columns}
-        data={sites.sort((a, b) => b.monthly - a.monthly)}
-        keyField="id"
-        onEdit={showDialog}
-        onDelete={handleDelete}
-        selectedIds={selectedItems}
-        onSelectChange={handleSelectChange}
-        onSelectAll={handleSelectAllChange}
-      />
+      {isLoading ? (
+        <div className="flex justify-center items-center h-32">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      ) : (
+        <TableComponent
+          columns={columns}
+          data={sites.sort((a, b) => b.monthly - a.monthly)}
+          keyField="id"
+          onEdit={showDialog}
+          onDelete={handleDelete}
+          selectedIds={selectedItems}
+          onSelectChange={handleSelectChange}
+          onSelectAll={handleSelectAllChange}
+        />
+      )}
+      <div className="flex items-center space-x-2 mt-4">
+        <BulkDownloadReports
+          selectedItems={selectedItems}
+          sites={sites}
+          siteStatuses={siteStatuses}
+        />
 
-      <BulkDownloadReports
-        selectedItems={selectedItems}
-        sites={sites}
-        siteStatuses={siteStatuses}
-      />
-
+        <Button
+          variant="outline"
+          onClick={handleImport}
+          disabled={isImporting}
+          className=""
+        >
+          {isImporting ? 'Importing...' : 'Import New URLs'}
+        </Button>
+      </div>
       {notification && (
         <Notification
           message={notification.message}

@@ -86,7 +86,7 @@ export function BulkDownloadReports({
   };
 
   return (
-    <div className="mt-4 space-y-2">
+    <div className="">
       <Button
         onClick={handleBulkDownload}
         variant="outline"

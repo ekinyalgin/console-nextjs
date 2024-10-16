@@ -38,13 +38,13 @@ export function CategoryTabs({
   };
 
   return (
-    <div className="flex justify-between items-center mb-4 border-b">
+    <div className="flex justify-between items-center mb-4 border-b font-semibold">
       <div className="space-x-2">
         {categories.map((category) => (
           <button
             key={category.id}
             onClick={() => handleCategoryChange(category.id)}
-            className={`text-sm h-10 px-2 ${
+            className={`text-sm h-10 px-2  text-xs ${
               activeCategory === category.id
                 ? 'border-b-2 border-gray-600'
                 : 'bg-red text-black'
