@@ -14,19 +14,19 @@ export async function GET(request: Request) {
     const fileName = `${domain}.xlsx`;
     const filePath = path.join(process.cwd(), 'public', 'reports', fileName);
 
-    console.log('Checking file path:', filePath);
+    //console.log('Checking file path:', filePath);
 
     await fs.access(filePath);
     return NextResponse.json({ exists: true, filePath });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      console.log('File not found:', (error as NodeJS.ErrnoException).path);
+      //      console.log('File not found:', (error as NodeJS.ErrnoException).path);
       return NextResponse.json({
         exists: false,
         filePath: (error as NodeJS.ErrnoException).path,
       });
     }
-    console.error('Error checking Excel file:', error);
+    //console.error('Error checking Excel file:', error);
     return NextResponse.json(
       { error: 'Error checking Excel file' },
       { status: 500 }

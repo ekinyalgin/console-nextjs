@@ -167,20 +167,21 @@ export default function TodoList() {
             onClick={() => handleCheckClick(row.original.id)}
           />
         ),
-        className: 'w-1/12',
+        className: 'w-1/12 px-0',
+        headerClassName: 'px-0',
       },
       {
         Header: 'Title',
         accessor: 'title',
-        className: 'w-3/12 text-sm font-semibold h-10 !text-left',
+        className: 'grow-1 text-sm font-semibold h-10 !text-left',
         headerClassName: 'text-left',
       },
-      {
+      /*{
         Header: 'Date',
         accessor: 'date',
         Cell: ({ value }) => format(parseISO(value), 'd.MM.yyyy'),
         className: 'w-2/12 text-xs text-center',
-      },
+      },*/
       {
         id: 'note',
         Header: 'Note',
