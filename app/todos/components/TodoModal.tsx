@@ -26,7 +26,7 @@ export function TodoDialog({ isOpen, onClose, onSave, todo }) {
       setLinks(todo.links || []);
     } else {
       setTitle('');
-      setDate('');
+      setDate(new Date().toISOString().split('T')[0]); // Set today's date as default
       setNote('');
       setLinks([]);
     }
@@ -80,7 +80,12 @@ export function TodoDialog({ isOpen, onClose, onSave, todo }) {
             onChange={(e) => setNote(e.target.value)}
           />
           <div>
-            <Button onClick={handleAddLink} variant="outline" size="sm">
+            <Button
+              onClick={handleAddLink}
+              variant="primary"
+              size="sm"
+              className="flex items-center"
+            >
               <Plus className="mr-2 h-4 w-4" /> Add Link
             </Button>
           </div>

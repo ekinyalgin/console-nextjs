@@ -139,7 +139,7 @@ model Todo {
   id    Int         @id @default(autoincrement())
   title String
   date  DateTime
-  note  String?
+  note  String? @db.Text
   links TodoLink[]
 }
 

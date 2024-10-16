@@ -50,26 +50,31 @@ export function TableComponent<T extends object>({
   };
 
   return (
-    <table className="min-w-full bg-white">
-      <thead>
+    <table className="shadow-sm rounded min-w-full bg-white">
+      <thead className="bg-gray-50 text-xs uppercase h-10 text-gray-600">
         <tr>
           {onSelectChange && <th className="w-1/12 px-4 py-2">Select</th>}
           {columns.map((column, index) => (
-            <th key={index} className={`px-4 py-2 ${column.className || ''}`}>
+            <th
+              key={index}
+              className={`px-4 py-2 font-normal tracking-wider ${column.headerClassName || ''}`}
+            >
               {column.Header as React.ReactNode}
             </th>
           ))}
           {(showEditAction || showDeleteAction) && (
-            <th className="w-1/12 px-4 py-2">Actions</th>
+            <th className="w-1/12 px-4 py-2 font-normal tracking-wider">
+              Actions
+            </th>
           )}
         </tr>
       </thead>
       <tbody>
         {data.map((item) => (
           <React.Fragment key={item[keyField] as React.Key}>
-            <tr className="border-t">
+            <tr className="border-t border-gray-100 hover:bg-gray-50">
               {onSelectChange && (
-                <td className="px-4 py-2">
+                <td className="px-4 py-2 0">
                   <input
                     type="checkbox"
                     checked={selectedIds.includes(item[keyField] as number)}
