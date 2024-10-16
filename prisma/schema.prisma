@@ -72,6 +72,8 @@ model Video {
   url      String  @unique
   note     String?
   isActive Boolean @default(false)
+  createdAt DateTime?
+  updatedAt DateTime?
 }
 
 model Exercise {
@@ -131,4 +133,20 @@ model URL {
   site      Site    @relation(fields: [siteId], references: [id])
 
   @@unique([url, siteId])
+}
+
+model Todo {
+  id    Int         @id @default(autoincrement())
+  title String
+  date  DateTime
+  note  String?
+  links TodoLink[]
+}
+
+model TodoLink {
+  id     Int    @id @default(autoincrement())
+  todoId Int
+  url    String
+  icon   String @db.Text
+  todo   Todo   @relation(fields: [todoId], references: [id], onDelete: Cascade)
 }

@@ -1,8 +1,8 @@
 import { ReactNode, Suspense } from 'react';
-import { SessionProvider } from "@/components/SessionProvider";
+import { SessionProvider } from '@/components/SessionProvider';
 import Header from '@/components/Header';
 import '../styles/globals.css';
-import Loading from '@/components/Loading'; // Yükleme bileşenini burada import edin
+import Loading from '@/components/Loading';
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -10,9 +10,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <SessionProvider>
           <Header />
-          <Suspense fallback={<Loading />}>
-            {children}
-          </Suspense>
+          <Suspense fallback={<Loading />}>{children}</Suspense>
         </SessionProvider>
       </body>
     </html>

@@ -26,7 +26,7 @@ export default function Header() {
   }
 
   return (
-    <header className="bg-white border-b border-gray-200">
+    <header className="bg-gray-800 text-white border-b border-gray-200 shadow">
       <nav className="container mx-auto px-4 py-3">
         <div className="flex justify-between items-center">
           <Link href="/" className="text-xl font-bold">
@@ -35,36 +35,34 @@ export default function Header() {
 
           <div className="flex space-x-10">
             <div className="flex items-center space-x-5 font-semibold text-sm">
-              <Link
-                href="/about"
-                className="text-gray-400  hover:text-gray-900 transition"
-              >
-                About
-              </Link>
-              <Link
-                href="/todos"
-                className="text-gray-400 hover:text-gray-900 transition"
-              >
-                Todos
-              </Link>
-              <Link
-                href="/sites"
-                className="text-gray-400 hover:text-gray-900 transition"
-              >
-                Sites
-              </Link>
-              <Link
-                href="/videos"
-                className="text-gray-400 hover:text-gray-900 transition"
-              >
-                Videos
-              </Link>
-              <Link
-                href="/exercises"
-                className="text-gray-400 hover:text-gray-900 transition"
-              >
-                Exercises
-              </Link>
+              {session && session.user.role === 'admin' && (
+                <>
+                  <Link
+                    href="/todos"
+                    className="text-gray-100 hover:text-white transition"
+                  >
+                    Todos
+                  </Link>
+                  <Link
+                    href="/sites"
+                    className="text-gray-100 hover:text-white transition"
+                  >
+                    Sites
+                  </Link>
+                  <Link
+                    href="/videos"
+                    className="text-gray-100 hover:text-white transition"
+                  >
+                    Videos
+                  </Link>
+                  <Link
+                    href="/exercises"
+                    className="text-gray-100 hover:text-white transition"
+                  >
+                    Exercises
+                  </Link>
+                </>
+              )}
             </div>
 
             <div className="flex items-center">
