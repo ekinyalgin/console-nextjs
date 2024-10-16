@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { StickyNote, Shuffle, PlayCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { StickyNote } from 'lucide-react';
 import { Exercise } from '@prisma/client';
 import { Button } from '@/components/ui/button';
-import { DataTable } from '@/components/DataTable';
 import Notification from '@/components/Notification';
 import { ExerciseModal } from './ExerciseModal';
-import { ColumnDef } from '@tanstack/react-table';
 import { ExerciseActions } from './ExerciseActions';
+import { TableComponent } from '@/components/TableComponent';
+import { Column } from 'react-table';
 
 export default function ExerciseList() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -48,11 +48,11 @@ export default function ExerciseList() {
     }
   };
 
-  const toggleDescriptionExpansion = (id: number) => {
+  const toggleDescriptionExpansion = useCallback((id: number) => {
     setExpandedDescriptions((prev) =>
       prev.includes(id) ? prev.filter((descId) => descId !== id) : [...prev, id]
     );
-  };
+  }, []);
 
   const addExercise = (newExercise: Partial<Exercise>) => {
     setExercises((prevExercises) => [
@@ -92,43 +92,59 @@ export default function ExerciseList() {
     setIsAddModalOpen(true);
   };
 
-  const columns: ColumnDef<Exercise>[] = [
-    {
-      accessorKey: 'title',
-      header: 'Title',
-      cell: ({ row }) => (
-        <span className="font-semibold text-left">{row.original.title}</span>
-      ),
-      headerClassName: 'text-left w-7/12',
-      cellClassName: 'text-left',
-    },
-    {
-      accessorKey: 'duration',
-      header: 'Duration',
-      cell: ({ row }) => row.original.duration,
-      headerClassName: 'w-2/12',
-      cellClassName: 'text-xs text-center',
-    },
-    {
-      accessorKey: 'description',
-      header: 'Desc',
-      cell: ({ row }) =>
-        row.original.description ? (
-          <button
-            onClick={() => toggleDescriptionExpansion(row.original.id)}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            <StickyNote className="w-4 h-4 text-gray-600" />
-          </button>
-        ) : null,
-      headerClassName: 'w-1/12',
-      cellClassName: 'text-center',
-    },
-  ];
+  const handleRandomSelection = (selectedIds: number[]) => {
+    setSelectedIds(selectedIds);
+    setShowOnlySelected(true);
+  };
+
+  const handleCheckboxChange = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((selectedId) => selectedId !== id)
+        : [...prev, id]
+    );
+  };
 
   const filteredExercises = showOnlySelected
     ? exercises.filter((exercise) => selectedIds.includes(exercise.id))
     : exercises;
+
+  const columns = useMemo<Column<Exercise>[]>(
+    () => [
+      {
+        Header: 'Title',
+        accessor: 'title',
+        className: 'w-7/12 text-left font-semibold',
+      },
+      {
+        Header: 'Duration',
+        accessor: 'duration',
+        className: 'w-2/12 text-center',
+      },
+      {
+        Header: 'Description',
+        accessor: 'description',
+        className: 'w-1/12 text-center',
+        Cell: ({ row }) =>
+          row.original.description ? (
+            <button
+              onClick={() => toggleDescriptionExpansion(row.original.id)}
+              className="text-blue-600 hover:text-blue-800"
+            >
+              <StickyNote className="w-4 h-4 text-gray-600" />
+            </button>
+          ) : null,
+      },
+    ],
+    [toggleDescriptionExpansion]
+  );
+
+  const renderSubComponent = useCallback(
+    ({ row }: { row: { original: Exercise } }) => (
+      <p className="text-sm text-gray-600">{row.original.description}</p>
+    ),
+    []
+  );
 
   return (
     <>
@@ -139,22 +155,19 @@ export default function ExerciseList() {
         setShowOnlySelected={setShowOnlySelected}
         setNotification={setNotification}
         onAddExercise={handleAddExercise}
+        onRandomSelection={handleRandomSelection}
       />
-      <DataTable
+      <TableComponent
         columns={columns}
         data={filteredExercises}
         keyField="id"
+        selectedIds={selectedIds}
+        onSelectChange={handleCheckboxChange}
         onEdit={openEditModal}
         onDelete={deleteExercise}
-        expandedRows={expandedDescriptions}
-        renderSubComponent={({ row }) => (
-          <div className="p-4 bg-gray-50">
-            <p className="text-sm text-gray-600">{row.original.description}</p>
-          </div>
-        )}
-        selectable={true}
-        selectedItems={selectedIds}
-        onSelectChange={setSelectedIds}
+        expandedDescriptions={expandedDescriptions}
+        onDescriptionToggle={toggleDescriptionExpansion}
+        renderSubComponent={renderSubComponent}
       />
 
       <ExerciseModal

@@ -13,6 +13,7 @@ interface ExerciseActionsProps {
     notification: { message: string; type: 'success' | 'error' } | null
   ) => void;
   onAddExercise: () => void;
+  onRandomSelection: (selectedIds: number[]) => void;
 }
 
 export function ExerciseActions({
@@ -22,6 +23,7 @@ export function ExerciseActions({
   setShowOnlySelected,
   setNotification,
   onAddExercise,
+  onRandomSelection,
 }: ExerciseActionsProps) {
   const router = useRouter();
 
@@ -50,8 +52,7 @@ export function ExerciseActions({
         if (selectedDuration >= targetDuration) break;
       }
 
-      setSelectedIds(selected);
-      setShowOnlySelected(true);
+      onRandomSelection(selected);
     } else {
       setNotification({
         message: 'No exercises available',

@@ -9,10 +9,10 @@ import React, {
 } from 'react';
 import { Check, ExternalLink, StickyNote } from 'lucide-react';
 import { Video } from '@prisma/client';
-import { DataTable } from '@/components/DataTable';
+import { TableComponent } from '@/components/TableComponent';
 import Notification from '@/components/Notification';
 import { VideoModal } from './VideoModal';
-import { ColumnDef } from '@tanstack/react-table';
+import { Column } from 'react-table';
 import { VideoActions } from './VideoActions';
 
 type State = {
@@ -104,6 +104,8 @@ function reducer(state: State, action: Action): State {
 
 export default function VideoList() {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [editingVideo, setEditingVideo] = useState<Video | null>(null);
 
   const fetchVideos = useCallback(async () => {
     dispatch({ type: 'FETCH_VIDEOS_START' });
@@ -162,9 +164,6 @@ export default function VideoList() {
     },
     []
   );
-
-  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
-  const [editingVideo, setEditingVideo] = useState<Video | null>(null);
 
   const openAddModal = () => {
     setEditingVideo(null);
@@ -225,12 +224,12 @@ export default function VideoList() {
     return title.slice(0, maxLength) + '...';
   }, []);
 
-  const columns = useMemo<ColumnDef<Video>[]>(
+  const columns = useMemo<Column<Video>[]>(
     () => [
       {
-        accessorKey: 'isActive',
-        header: 'Active',
-        cell: ({ row }) => (
+        Header: 'Active',
+        accessor: 'isActive',
+        Cell: ({ row }) => (
           <button
             onClick={() =>
               toggleVideoActive(row.original.id, row.original.isActive)
@@ -247,12 +246,12 @@ export default function VideoList() {
             />
           </button>
         ),
-        headerClassName: 'w-1/12',
+        className: 'w-1/12',
       },
       {
-        accessorKey: 'title',
-        header: 'Title',
-        cell: ({ row }) => (
+        Header: 'Title',
+        accessor: 'title',
+        Cell: ({ row }) => (
           <a
             href={row.original.url}
             target="_blank"
@@ -265,22 +264,21 @@ export default function VideoList() {
             <ExternalLink className="w-4 h-4 ml-2 flex-shrink-0" />
           </a>
         ),
-        headerClassName: 'text-left w-8/12',
-        cellClassName: 'text-left',
+        className: 'text-left w-8/12',
       },
       {
-        accessorKey: 'note',
-        header: 'Note',
-        cell: ({ row }) =>
-          row.original.note && (
+        Header: 'Note',
+        accessor: 'note',
+        Cell: ({ row }) =>
+          row.original.note ? (
             <button
               onClick={() => toggleNoteExpansion(row.original.id)}
               className="flex justify-center items-center w-full"
             >
               <StickyNote className="w-4 h-4 text-gray-600" />
             </button>
-          ),
-        headerClassName: 'w-1/12',
+          ) : null,
+        className: 'w-1/12',
       },
     ],
     [toggleVideoActive, truncateTitle, toggleNoteExpansion]
@@ -288,13 +286,9 @@ export default function VideoList() {
 
   const renderSubComponent = useCallback(
     ({ row }: { row: { original: Video } }) => (
-      <tr>
-        <td>
-          <p className="text-sm text-gray-600">{row.original.note}</p>
-        </td>
-      </tr>
+      <p className="text-sm text-gray-600">{row.original.note}</p>
     ),
-    [columns.length]
+    []
   );
 
   if (state.isLoading) return <div>Loading...</div>;
@@ -310,13 +304,14 @@ export default function VideoList() {
           dispatch({ type: 'SET_NOTIFICATION', payload: notification })
         }
       />
-      <DataTable
+      <TableComponent
         columns={columns}
         data={state.videos}
         keyField="id"
         onEdit={openEditModal}
         onDelete={deleteVideo}
-        expandedRows={state.expandedNotes}
+        expandedDescriptions={state.expandedNotes}
+        onDescriptionToggle={toggleNoteExpansion}
         renderSubComponent={renderSubComponent}
       />
 
