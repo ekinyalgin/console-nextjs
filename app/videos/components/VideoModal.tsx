@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,22 +11,36 @@ import { Textarea } from '@/components/ui/textarea';
 import { Video } from '@prisma/client';
 import { Upload } from 'lucide-react';
 
-interface AddVideoModalProps {
+interface VideoModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onVideoAdded: (video: Video) => void;
+  onVideoSubmit: (video: Partial<Video>) => void;
+  video?: Video | null;
 }
 
-export function AddVideoModal({
+export function VideoModal({
   isOpen,
   onClose,
-  onVideoAdded,
-}: AddVideoModalProps) {
+  onVideoSubmit,
+  video,
+}: VideoModalProps) {
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [note, setNote] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (video) {
+      setTitle(video.title);
+      setUrl(video.url);
+      setNote(video.note || '');
+    } else {
+      setTitle('');
+      setUrl('');
+      setNote('');
+    }
+  }, [video]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,28 +52,17 @@ export function AddVideoModal({
       .replace(/\|/g, '-')
       .replace(/"/g, '');
 
-    try {
-      const response = await fetch('/api/videos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: formattedTitle, url, note }),
-      });
+    const videoData: Partial<Video> = {
+      title: formattedTitle,
+      url,
+      note,
+    };
 
-      if (response.ok) {
-        const newVideo = await response.json();
-        onVideoAdded(newVideo);
-        setTitle('');
-        setUrl('');
-        setNote('');
-        onClose();
-      } else {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to add video');
-      }
-    } catch (error) {
-      console.error('Error adding video:', error);
-      // Burada bir hata bildirimi gösterebilirsiniz
+    if (video) {
+      videoData.id = video.id;
     }
+
+    onVideoSubmit(videoData);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,7 +90,7 @@ export function AddVideoModal({
 
         if (response.ok) {
           const importedVideos = await response.json();
-          importedVideos.forEach(onVideoAdded);
+          importedVideos.forEach(onVideoSubmit);
           setSelectedFile(null);
           if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -109,7 +112,7 @@ export function AddVideoModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>Add New Video</DialogTitle>
+          <DialogTitle>{video ? 'Edit Video' : 'Add New Video'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
@@ -130,26 +133,28 @@ export function AddVideoModal({
             onChange={(e) => setNote(e.target.value)}
           />
           <div className="flex justify-between">
-            <Button type="submit">Add Video</Button>
+            <Button type="submit">{video ? 'Update' : 'Add'} Video</Button>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
           </div>
         </form>
-        <div className="flex items-center justify-between mt-4 space-x-2">
-          <Input
-            type="file"
-            className="grow"
-            accept=".json"
-            onChange={handleFileSelect}
-            ref={fileInputRef}
-          />
-          {selectedFile && (
-            <Button onClick={handleImport} className="w-60 flex items-center">
-              <Upload className="w-4 h-4 mr-2" /> Import JSON
-            </Button>
-          )}
-        </div>
+        {!video && (
+          <div className="flex items-center justify-between mt-4 space-x-2">
+            <Input
+              type="file"
+              className="grow"
+              accept=".json"
+              onChange={handleFileSelect}
+              ref={fileInputRef}
+            />
+            {selectedFile && (
+              <Button onClick={handleImport} className="w-60 flex items-center">
+                <Upload className="w-4 h-4 mr-2" /> Import JSON
+              </Button>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

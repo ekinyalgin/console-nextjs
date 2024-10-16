@@ -1,11 +1,17 @@
 'use client';
 
-import React, { useEffect, useMemo, useCallback, useReducer } from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useCallback,
+  useReducer,
+  useState,
+} from 'react';
 import { Check, ExternalLink, StickyNote } from 'lucide-react';
 import { Video } from '@prisma/client';
 import { DataTable } from '@/components/DataTable';
 import Notification from '@/components/Notification';
-import { EditVideoModal } from './EditVideoModal';
+import { VideoModal } from './VideoModal';
 import { ColumnDef } from '@tanstack/react-table';
 import { VideoActions } from './VideoActions';
 
@@ -157,45 +163,61 @@ export default function VideoList() {
     []
   );
 
-  const openEditModal = useCallback((video: Video) => {
-    dispatch({ type: 'SET_EDIT_MODAL', payload: { isOpen: true, video } });
-  }, []);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [editingVideo, setEditingVideo] = useState<Video | null>(null);
 
-  const handleEditSubmit = useCallback(async (updatedVideo: Video) => {
+  const openAddModal = () => {
+    setEditingVideo(null);
+    setIsVideoModalOpen(true);
+  };
+
+  const openEditModal = (video: Video) => {
+    setEditingVideo(video);
+    setIsVideoModalOpen(true);
+  };
+
+  const handleVideoSubmit = async (videoData: Partial<Video>) => {
     try {
-      const response = await fetch(`/api/videos/${updatedVideo.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedVideo),
-      });
-      const video = await response.json();
-      dispatch({ type: 'UPDATE_VIDEO', payload: video });
-      dispatch({
-        type: 'SET_EDIT_MODAL',
-        payload: { isOpen: false, video: null },
-      });
+      if (editingVideo) {
+        // Edit existing video
+        const response = await fetch(`/api/videos/${editingVideo.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(videoData),
+        });
+        const updatedVideo = await response.json();
+        dispatch({ type: 'UPDATE_VIDEO', payload: updatedVideo });
+      } else {
+        // Add new video
+        const response = await fetch('/api/videos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(videoData),
+        });
+        const newVideo = await response.json();
+        dispatch({ type: 'ADD_VIDEO', payload: newVideo });
+      }
+      setIsVideoModalOpen(false);
       dispatch({
         type: 'SET_NOTIFICATION',
-        payload: { message: 'Video updated successfully', type: 'success' },
+        payload: {
+          message: `Video ${editingVideo ? 'updated' : 'added'} successfully`,
+          type: 'success',
+        },
       });
     } catch (error) {
       dispatch({
         type: 'SET_NOTIFICATION',
-        payload: { message: 'Failed to update video', type: 'error' },
+        payload: {
+          message: `Failed to ${editingVideo ? 'update' : 'add'} video`,
+          type: 'error',
+        },
       });
     }
-  }, []);
+  };
 
   const toggleNoteExpansion = useCallback((id: number) => {
     dispatch({ type: 'TOGGLE_NOTE_EXPANSION', payload: id });
-  }, []);
-
-  const addVideo = useCallback((newVideo: Video) => {
-    dispatch({ type: 'ADD_VIDEO', payload: newVideo });
-    dispatch({
-      type: 'SET_NOTIFICATION',
-      payload: { message: 'Video added successfully', type: 'success' },
-    });
   }, []);
 
   const truncateTitle = useCallback((title: string, maxLength: number = 50) => {
@@ -282,7 +304,7 @@ export default function VideoList() {
     <>
       <VideoActions
         videos={state.videos}
-        onAddVideo={addVideo}
+        onAddVideo={openAddModal}
         onVideoStatusChange={toggleVideoActive}
         setNotification={(notification) =>
           dispatch({ type: 'SET_NOTIFICATION', payload: notification })
@@ -298,16 +320,11 @@ export default function VideoList() {
         renderSubComponent={renderSubComponent}
       />
 
-      <EditVideoModal
-        isOpen={state.isEditModalOpen}
-        onClose={() =>
-          dispatch({
-            type: 'SET_EDIT_MODAL',
-            payload: { isOpen: false, video: null },
-          })
-        }
-        video={state.editingVideo}
-        onVideoUpdated={handleEditSubmit}
+      <VideoModal
+        isOpen={isVideoModalOpen}
+        onClose={() => setIsVideoModalOpen(false)}
+        onVideoSubmit={handleVideoSubmit}
+        video={editingVideo}
       />
 
       {state.notification && (
