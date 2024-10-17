@@ -17,22 +17,41 @@ import {
   startOfDay,
 } from 'date-fns';
 
+type Todo = {
+  id: number;
+  title: string;
+  date: string;
+  note?: string;
+  links: { url: string; icon: string }[];
+};
+
+type GroupedTodo = {
+  date: string;
+  todos: Todo[];
+};
+
+// ExtendedColumn tipini güncelleyelim
+type ExtendedColumn<T> = {
+  Header: string | React.ReactNode;
+  accessor?: keyof T | string;
+  id?: string;
+  Cell?: (props: { value: unknown; row: { original: T } }) => React.ReactNode;
+  headerClassName?: string;
+  className?: string;
+};
+
 export default function TodoList() {
-  const [todos, setTodos] = useState([]);
+  const [todos, setTodos] = useState<GroupedTodo[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingTodo, setEditingTodo] = useState(null);
+  const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [expandedNotes, setExpandedNotes] = useState<number[]>([]);
   const [showFutureTodos, setShowFutureTodos] = useState(false);
 
-  useEffect(() => {
-    fetchTodos();
-  }, []);
-
-  const fetchTodos = async () => {
+  const fetchTodos = useCallback(async () => {
     try {
       const response = await fetch('/api/todos');
       if (response.ok) {
-        const data = await response.json();
+        const data: Todo[] = await response.json();
         const groupedTodos = groupTodosByDate(data);
         setTodos(groupedTodos);
       } else {
@@ -41,10 +60,14 @@ export default function TodoList() {
     } catch (error) {
       console.error('Error fetching todos:', error);
     }
-  };
+  }, []);
 
-  const groupTodosByDate = (todos) => {
-    const grouped = todos.reduce((acc, todo) => {
+  useEffect(() => {
+    fetchTodos();
+  }, [fetchTodos]);
+
+  const groupTodosByDate = (todos: Todo[]): GroupedTodo[] => {
+    const grouped = todos.reduce<Record<string, Todo[]>>((acc, todo) => {
       const dateKey = format(parseISO(todo.date), 'yyyy-MM-dd');
       if (!acc[dateKey]) {
         acc[dateKey] = [];
@@ -61,7 +84,7 @@ export default function TodoList() {
       .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
   };
 
-  const formatGroupDate = (dateString) => {
+  const formatGroupDate = (dateString: string) => {
     const date = parseISO(dateString);
     if (isToday(date)) return 'Today';
     if (isYesterday(date)) return 'Yesterday';
@@ -69,53 +92,58 @@ export default function TodoList() {
     return format(date, 'd.MM.yyyy');
   };
 
-  const handleCheckClick = async (id) => {
-    try {
-      const allTodos = todos.flatMap((group) => group.todos);
-      const todo = allTodos.find((t) => t.id === id);
+  const handleCheckClick = useCallback(
+    async (id: number) => {
+      try {
+        const allTodos = todos.flatMap((group) => group.todos);
+        const todo = allTodos.find((t) => t.id === id);
 
-      if (!todo) {
-        console.error('Todo not found', id);
-        return;
+        if (!todo) {
+          console.error('Todo not found', id);
+          return;
+        }
+
+        const newDate = addDays(parseISO(todo.date), 1);
+
+        const response = await fetch(`/api/todos/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...todo,
+            date: newDate.toISOString(),
+            links: todo.links.map((link) => ({
+              url: link.url,
+              icon: link.icon,
+            })),
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Failed to update todo date:', errorData.message);
+          return;
+        }
+
+        console.log('Todo updated successfully');
+        await fetchTodos();
+      } catch (error) {
+        console.error('Error updating todo date:', error);
       }
-
-      const newDate = addDays(parseISO(todo.date), 1);
-
-      const response = await fetch(`/api/todos/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...todo,
-          date: newDate.toISOString(),
-          links: todo.links.map((link) => ({ url: link.url, icon: link.icon })),
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Failed to update todo date:', errorData.message);
-        return;
-      }
-
-      console.log('Todo updated successfully');
-
-      await fetchTodos();
-    } catch (error) {
-      console.error('Error updating todo date:', error);
-    }
-  };
+    },
+    [todos, fetchTodos]
+  );
 
   const handleAddTodo = () => {
     setEditingTodo(null);
     setIsDialogOpen(true);
   };
 
-  const handleEditTodo = (todo) => {
+  const handleEditTodo = (todo: Todo) => {
     setEditingTodo(todo);
     setIsDialogOpen(true);
   };
 
-  const handleDeleteTodo = async (id) => {
+  const handleDeleteTodo = async (id: number) => {
     try {
       const response = await fetch(`/api/todos/${id}`, { method: 'DELETE' });
       if (response.ok) {
@@ -128,7 +156,7 @@ export default function TodoList() {
     }
   };
 
-  const handleSaveTodo = async (todoData) => {
+  const handleSaveTodo = async (todoData: Partial<Todo>) => {
     try {
       const url = editingTodo ? `/api/todos/${editingTodo.id}` : '/api/todos';
       const method = editingTodo ? 'PUT' : 'POST';
@@ -155,7 +183,7 @@ export default function TodoList() {
     );
   }, []);
 
-  const todoColumns = useMemo(
+  const todoColumns: ExtendedColumn<Todo>[] = useMemo(
     () => [
       {
         id: 'check',
@@ -176,12 +204,6 @@ export default function TodoList() {
         className: 'grow-1 text-sm font-semibold h-10 !text-left',
         headerClassName: 'text-left',
       },
-      /*{
-        Header: 'Date',
-        accessor: 'date',
-        Cell: ({ value }) => format(parseISO(value), 'd.MM.yyyy'),
-        className: 'w-2/12 text-xs text-center',
-      },*/
       {
         id: 'note',
         Header: 'Note',
@@ -202,7 +224,7 @@ export default function TodoList() {
         headerClassName: 'text-left',
         Cell: ({ value }) => (
           <div className="flex space-x-2">
-            {value.map((link, index) => (
+            {(value as Todo['links']).map((link, index) => (
               <a
                 key={index}
                 href={link.url}
@@ -231,7 +253,7 @@ export default function TodoList() {
   );
 
   const renderSubComponent = useCallback(
-    ({ row }) => (
+    ({ row }: { row: { original: Todo } }) => (
       <div className="px-4 py-2 bg-gray-100">
         <p className="text-sm text-gray-500">{row.original.note}</p>
       </div>
@@ -272,7 +294,6 @@ export default function TodoList() {
             onEdit={handleEditTodo}
             onDelete={handleDeleteTodo}
             expandedDescriptions={expandedNotes}
-            onDescriptionToggle={toggleNoteExpansion}
             renderSubComponent={renderSubComponent}
           />
         </div>

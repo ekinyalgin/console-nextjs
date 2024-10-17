@@ -6,8 +6,7 @@ import { Exercise } from '@prisma/client';
 import Notification from '@/components/Notification';
 import { ExerciseModal } from './ExerciseModal';
 import { ExerciseActions } from './ExerciseActions';
-import { TableComponent } from '@/components/TableComponent';
-import { Column } from 'react-table';
+import { TableComponent, ExtendedColumn } from '@/components/TableComponent';
 
 // Define the state type
 interface ExerciseState {
@@ -115,7 +114,7 @@ export default function ExerciseList() {
         type: 'SET_NOTIFICATION',
         payload: { message: 'Exercise deleted successfully', type: 'success' },
       });
-    } catch (error) {
+    } catch {
       dispatch({
         type: 'SET_NOTIFICATION',
         payload: { message: 'Failed to delete exercise', type: 'error' },
@@ -153,7 +152,7 @@ export default function ExerciseList() {
         type: 'SET_NOTIFICATION',
         payload: { message: 'Exercise updated successfully', type: 'success' },
       });
-    } catch (error) {
+    } catch {
       dispatch({
         type: 'SET_NOTIFICATION',
         payload: { message: 'Failed to update exercise', type: 'error' },
@@ -167,6 +166,15 @@ export default function ExerciseList() {
 
   const handleRandomSelection = (selectedIds: number[]) => {
     dispatch({ type: 'SET_SELECTED_IDS', payload: selectedIds });
+
+    // Exercises'ı karıştır
+    const shuffledExercises = [...state.exercises].sort(
+      () => Math.random() - 0.5
+    );
+
+    // Karıştırılmış exercises'ı state'e set et
+    dispatch({ type: 'SET_EXERCISES', payload: shuffledExercises });
+
     dispatch({ type: 'SET_SHOW_ONLY_SELECTED', payload: true });
   };
 
@@ -183,7 +191,7 @@ export default function ExerciseList() {
       )
     : state.exercises;
 
-  const columns = useMemo<Column<Exercise>[]>(
+  const columns = useMemo<ExtendedColumn<Exercise>[]>(
     () => [
       {
         Header: 'Title',
@@ -200,15 +208,23 @@ export default function ExerciseList() {
         Header: 'Desc',
         accessor: 'description',
         className: 'w-1/12 text-center',
-        Cell: ({ row }) =>
-          row.original.description ? (
+        Cell: ({
+          value,
+          row,
+        }: {
+          value: unknown;
+          row: { original: Exercise };
+        }) => {
+          const description = value as string | null | undefined;
+          return description ? (
             <button
               onClick={() => toggleDescriptionExpansion(row.original.id)}
               className="text-blue-600 hover:text-blue-800"
             >
               <FileText className="w-4 h-4 text-gray-600" />
             </button>
-          ) : null,
+          ) : null;
+        },
       },
     ],
     [toggleDescriptionExpansion]
@@ -260,7 +276,6 @@ export default function ExerciseList() {
         onEdit={openEditModal}
         onDelete={deleteExercise}
         expandedDescriptions={state.expandedDescriptions}
-        onDescriptionToggle={toggleDescriptionExpansion}
         renderSubComponent={renderSubComponent}
       />
 

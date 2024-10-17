@@ -2,10 +2,18 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
+// Site tipini tanımlayalım
+interface Site {
+  id: number;
+  domainName: string;
+  monthly: number;
+  categoryIds: number[]; // categoryIds'i ekleyelim
+}
+
 interface BulkUpdateVisitorsProps {
   activeCategory: number;
   onNotification: (message: string, type: 'success' | 'error') => void;
-  onBulkUpdate: (updatedSites: any[]) => void;
+  onBulkUpdate: (updatedSites: Partial<Site>[]) => void;
 }
 
 export function BulkUpdateVisitors({
@@ -49,7 +57,12 @@ export function BulkUpdateVisitors({
       onNotification('Bulk update successful', 'success');
       onBulkUpdate(data.updatedSites);
     } catch (error) {
-      onNotification('Error during bulk update', 'error');
+      console.error('Bulk update error:', error);
+      if (error instanceof Error) {
+        onNotification(`Error during bulk update: ${error.message}`, 'error');
+      } else {
+        onNotification('An unknown error occurred during bulk update', 'error');
+      }
     }
   };
 

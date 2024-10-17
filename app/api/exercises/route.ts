@@ -5,7 +5,7 @@ export async function GET() {
   try {
     const exercises = await prisma.exercise.findMany();
     return NextResponse.json(exercises);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to fetch exercises' },
       { status: 500 }
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       data: body,
     });
     return NextResponse.json(exercise);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to create exercise' },
       { status: 500 }

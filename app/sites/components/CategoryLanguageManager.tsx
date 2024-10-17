@@ -50,7 +50,7 @@ export function CategoryLanguageManager({
           onChange={(e) => setNewItem(e.target.value)}
           placeholder={`New ${type} name`}
         />
-        <Button onClick={handleAdd} size="icon">
+        <Button onClick={handleAdd}>
           <Plus className="h-6 w-4" />
         </Button>
       </div>
@@ -63,7 +63,7 @@ export function CategoryLanguageManager({
                   value={editingName}
                   onChange={(e) => setEditingName(e.target.value)}
                 />
-                <button onClick={handleEditSave} size="icon">
+                <button onClick={handleEditSave}>
                   <Check strokeWidth="3" className="ml-4 h-4 w-4" />
                 </button>
               </>
@@ -73,16 +73,11 @@ export function CategoryLanguageManager({
                 <div className="flex items-center space-x-2">
                   <Button
                     onClick={() => handleEditStart(item.id, item.name)}
-                    size="icon"
                     variant="ghost"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button
-                    onClick={() => onDelete(item.id)}
-                    size="icon"
-                    variant="ghost"
-                  >
+                  <Button onClick={() => onDelete(item.id)} variant="ghost">
                     <Trash className="h-4 w-4" />
                   </Button>
                 </div>

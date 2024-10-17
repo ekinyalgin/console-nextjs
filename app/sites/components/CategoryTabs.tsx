@@ -25,7 +25,7 @@ export function CategoryTabs({
     } else if (categories.length > 0) {
       onCategoryChange(categories[0].id);
     }
-  }, [categories]);
+  }, [categories, onCategoryChange]);
 
   useEffect(() => {
     if (activeCategory !== null) {
@@ -44,7 +44,7 @@ export function CategoryTabs({
           <button
             key={category.id}
             onClick={() => handleCategoryChange(category.id)}
-            className={`text-sm h-10 px-2  text-xs ${
+            className={`h-10 px-2  text-xs ${
               activeCategory === category.id
                 ? 'border-b-2 border-gray-600'
                 : 'bg-red text-black'
@@ -54,12 +54,7 @@ export function CategoryTabs({
           </button>
         ))}
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onBulkUpdateToggle}
-        className="pb-1"
-      >
+      <Button variant="ghost" onClick={onBulkUpdateToggle} className="pb-1">
         <Settings strokeWidth={1} className="h-4 w-4" />
       </Button>
     </div>

@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+// Link'in tipini tanımlıyoruz
+interface Link {
+  url: string;
+  icon: string;
+}
+
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
@@ -28,7 +34,12 @@ export async function PUT(
 ) {
   try {
     const body = await request.json();
-    const { title, date, note, links } = body;
+    const {
+      title,
+      date,
+      note,
+      links,
+    }: { title: string; date: string; note: string; links: Link[] } = body;
 
     const updatedTodo = await prisma.todo.update({
       where: { id: parseInt(params.id) },
@@ -38,7 +49,7 @@ export async function PUT(
         note,
         links: {
           deleteMany: {}, // Mevcut linkleri sil
-          create: links.map((link) => ({
+          create: links.map((link: Link) => ({
             url: link.url,
             icon: link.icon,
           })),
@@ -50,10 +61,19 @@ export async function PUT(
     return NextResponse.json(updatedTodo);
   } catch (error) {
     console.error('Error updating todo:', error);
-    return NextResponse.json(
-      { error: 'Error updating todo', details: error.message },
-      { status: 500 }
-    );
+
+    // Error'ın bir "message" özelliğine sahip olup olmadığını kontrol ediyoruz
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: 'Error updating todo', details: error.message },
+        { status: 500 }
+      );
+    } else {
+      return NextResponse.json(
+        { error: 'Error updating todo', details: String(error) },
+        { status: 500 }
+      );
+    }
   }
 }
 

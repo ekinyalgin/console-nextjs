@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { downloadReport } from '../download/download';
-import { TransformStream } from 'stream/web';
+import { Transform } from 'node:stream';
 
 export async function GET(
   request: Request,
@@ -9,12 +9,17 @@ export async function GET(
 ) {
   const domain = params.domain;
 
-  const stream = new TransformStream();
-  const writer = stream.writable.getWriter();
+  const nodeStream = new Transform({
+    transform(chunk, encoding, callback) {
+      callback(null, chunk);
+    },
+  });
+
+  const writer = nodeStream;
   const encoder = new TextEncoder();
 
   const sendStatus = async (status: string) => {
-    await writer.write(encoder.encode(JSON.stringify({ status }) + '\n'));
+    writer.write(encoder.encode(JSON.stringify({ status }) + '\n'));
   };
 
   (async () => {
@@ -32,13 +37,13 @@ export async function GET(
 
       if (!site) {
         await sendStatus('Site not found');
-        await writer.close();
+        writer.end(); // stream'i kapat
         return;
       }
 
       const language = site.languages[0]?.language.name.toLowerCase() || 'en';
 
-      const filePath = await downloadReport({
+      await downloadReport({
         domainName: domain,
         language,
         monthlyVisitors: site.monthly,
@@ -46,15 +51,31 @@ export async function GET(
       });
 
       await sendStatus('Report downloaded successfully');
-      await writer.close();
+      writer.end(); // stream'i kapat
     } catch (error) {
       console.error('Error downloading report:', error);
       await sendStatus('Error downloading report');
-      await writer.close();
+      writer.end(); // stream'i kapat
     }
   })();
 
-  return new NextResponse(stream.readable, {
+  // Node.js akışını bir tarayıcı `ReadableStream`'ine dönüştürün
+  const readableStream = new ReadableStream({
+    async start(controller) {
+      nodeStream.on('data', (chunk) => {
+        controller.enqueue(chunk);
+      });
+      nodeStream.on('end', () => {
+        controller.close();
+      });
+      nodeStream.on('error', (err) => {
+        console.error('Stream error:', err);
+        controller.error(err);
+      });
+    },
+  });
+
+  return new NextResponse(readableStream, {
     headers: { 'Content-Type': 'text/plain; charset=utf-8' },
   });
 }

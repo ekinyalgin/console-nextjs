@@ -1,5 +1,5 @@
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../api/auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
 import dynamic from 'next/dynamic';
 
 const SiteList = dynamic(() => import('./components/SiteList'), { ssr: false });

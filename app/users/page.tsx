@@ -1,5 +1,5 @@
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../api/auth/[...nextauth]/route';
+import { authOptions } from '../api/auth/[...nextauth]/auth';
 import prisma from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 
@@ -15,7 +15,7 @@ export default async function UsersPage() {
     include: { role: true },
   });
 
-  if (currentUser?.role.name === 1) {
+  if (currentUser?.role.name !== 'admin') {
     return <div>Access Denied. Only admins can view this page.</div>;
   }
 

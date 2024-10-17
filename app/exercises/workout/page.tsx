@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function WorkoutPage() {
-  const [exercises, setExercises] = useState([]);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
   const [exerciseTime, setExerciseTime] = useState(0);
@@ -13,6 +13,14 @@ export default function WorkoutPage() {
 
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  interface Exercise {
+    id: number;
+    title: string;
+    duration: string; // "MM:SS" formatında bir string
+    description: string | null;
+    videoUrl: string | null;
+  }
 
   useEffect(() => {
     const exercisesParam = searchParams.get('exercises');
@@ -25,7 +33,7 @@ export default function WorkoutPage() {
   // Toplam süreyi ve her bir egzersizin süresini belirler
   useEffect(() => {
     if (exercises.length > 0) {
-      let totalDuration = exercises.reduce((acc, exercise) => {
+      const totalDuration = exercises.reduce((acc, exercise) => {
         const [minutes, seconds] = exercise.duration.split(':').map(Number);
         return acc + minutes * 60 + seconds;
       }, 0);
@@ -35,12 +43,12 @@ export default function WorkoutPage() {
     }
   }, [exercises]);
 
-  // Egzersiz zamanlayıcısı
   useEffect(() => {
-    let timer;
+    let timer: number; // Timer'ı number olarak belirliyoruz
     if (!isPaused && isStarted) {
       if (exerciseTime > 0) {
-        timer = setInterval(() => {
+        timer = window.setInterval(() => {
+          // Tarayıcı ortamında window.setInterval kullanarak number döndüğünü belirtiyoruz
           setExerciseTime((prev) => prev - 1);
           setTotalTime((prev) => prev - 1);
         }, 1000);
@@ -57,7 +65,7 @@ export default function WorkoutPage() {
         }, 500);
       }
     }
-    return () => clearInterval(timer);
+    return () => clearInterval(timer); // clearInterval ile temizliyoruz
   }, [
     isPaused,
     isStarted,
@@ -68,7 +76,9 @@ export default function WorkoutPage() {
   ]);
 
   // Egzersizin süresini saniyeye çevirir
-  const getDurationInSeconds = (duration) => {
+  // Egzersizin süresini saniyeye çevirir
+  const getDurationInSeconds = (duration: string) => {
+    // 'duration' parametresine string tipi eklenmiştir
     const [minutes, seconds] = duration.split(':').map(Number);
     return minutes * 60 + seconds;
   };
@@ -85,7 +95,8 @@ export default function WorkoutPage() {
   };
 
   // Video URL'sini iframe embed yapısına çevir
-  const getEmbedUrl = (url) => {
+  const getEmbedUrl = (url: string | null) => {
+    // 'url' parametresine string veya null tipi eklenmiştir
     if (!url) return '';
     const embedUrl = url.replace('watch?v=', 'embed/');
     return `${embedUrl}&autoplay=1`;

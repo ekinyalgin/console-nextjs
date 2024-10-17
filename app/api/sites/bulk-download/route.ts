@@ -1,12 +1,6 @@
 import { NextResponse } from 'next/server';
 import { downloadReport } from '../[domain]/download/download';
-import { TransformStream } from 'stream/web';
-
-interface SiteToDownload {
-  domainName: string;
-  language: string;
-  monthlyVisitors: number;
-}
+import { Transform } from 'node:stream'; // node:stream modülü kullanıyoruz
 
 export async function POST(request: Request) {
   const { sites, concurrency = 4 } = await request.json();
@@ -18,12 +12,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const stream = new TransformStream();
-  const writer = stream.writable.getWriter();
+  const nodeStream = new Transform({
+    transform(chunk, encoding, callback) {
+      callback(null, chunk);
+    },
+  });
+
+  const writer = nodeStream;
   const encoder = new TextEncoder();
 
   const sendStatus = async (status: string) => {
-    await writer.write(encoder.encode(JSON.stringify({ status }) + '\n'));
+    writer.write(encoder.encode(JSON.stringify({ status }) + '\n'));
   };
 
   (async () => {
@@ -66,7 +65,7 @@ export async function POST(request: Request) {
 
       const finalResults = await Promise.all(results);
       for (const result of finalResults) {
-        if (result.error) {
+        if ('error' in result) {
           await sendStatus(
             `Error processing ${result.domainName}: ${result.error}`
           );
@@ -80,13 +79,33 @@ export async function POST(request: Request) {
       await sendStatus('All downloads completed');
     } catch (error) {
       console.error('Error during bulk download:', error);
-      await sendStatus(`Error during bulk download: ${error.message}`);
+
+      if (error instanceof Error) {
+        await sendStatus(`Error during bulk download: ${error.message}`);
+      } else {
+        await sendStatus(`Error during bulk download: ${String(error)}`);
+      }
     } finally {
-      await writer.close();
+      await writer.end();
     }
   })();
 
-  return new NextResponse(stream.readable, {
+  // Node.js akışını `ReadableStream` ile sarıyoruz
+  const readableStream = new ReadableStream({
+    start(controller) {
+      nodeStream.on('data', (chunk) => {
+        controller.enqueue(chunk);
+      });
+      nodeStream.on('end', () => {
+        controller.close();
+      });
+      nodeStream.on('error', (err) => {
+        controller.error(err);
+      });
+    },
+  });
+
+  return new NextResponse(readableStream, {
     headers: { 'Content-Type': 'text/plain; charset=utf-8' },
   });
 }

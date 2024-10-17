@@ -1,17 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { TableComponent } from '@/components/TableComponent';
-import { Column } from 'react-table';
+import { TableComponent, ExtendedColumn } from '@/components/TableComponent';
 import { Button } from '@/components/ui/button';
-import {
-  Download,
-  FileDown,
-  Trash,
-  Settings,
-  Upload,
-  Loader2,
-} from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import {
   Dialog,
@@ -21,12 +13,11 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { SiteForm } from './SiteForm';
+import ImportNewUrls from './ImportNewUrls';
 import { BulkUpdateVisitors } from './BulkUpdateVisitors';
 import Notification from '@/components/Notification';
-import { Checkbox } from '@/components/ui/checkbox';
 import { CategoryTabs } from './CategoryTabs';
 import { BulkDownloadReports } from './BulkDownloadReports';
-import ImportNewUrls from './ImportNewUrls';
 
 interface Site {
   id: number;
@@ -34,6 +25,8 @@ interface Site {
   monthly: number;
   categories: { category: { id: number; name: string } }[];
   languages: { language: { id: number; name: string } }[];
+  SiteCategory: { category: { id: number } }[];
+  categoryIds: number[]; // Bu satırı ekleyin
 }
 
 interface SiteCategories {
@@ -46,17 +39,22 @@ interface SiteLanguages {
   name: string;
 }
 
+interface SiteStatus {
+  hasExcel: boolean;
+  hasNotReviewedUrls: boolean;
+}
+
 export default function SiteList() {
   const [sites, setSites] = useState<Site[]>([]);
   const [categories, setCategories] = useState<SiteCategories[]>([]);
   const [languages, setLanguages] = useState<SiteLanguages[]>([]);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
-  const [downloadStatus, setDownloadStatus] = useState<{
-    [key: string]: string;
-  }>({});
-  const [siteStatuses, setSiteStatuses] = useState<{
-    [key: string]: { hasExcel: boolean; hasNotReviewedUrls: boolean };
-  }>({});
+  const [downloadStatus, setDownloadStatus] = useState<Record<string, string>>(
+    {}
+  );
+  const [siteStatuses, setSiteStatuses] = useState<Record<string, SiteStatus>>(
+    {}
+  );
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSite, setEditingSite] = useState<Site | null>(null);
   const [notification, setNotification] = useState<{
@@ -66,10 +64,16 @@ export default function SiteList() {
   const [isBulkUpdateVisible, setIsBulkUpdateVisible] =
     useState<boolean>(false);
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
-  const [selectAll, setSelectAll] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-  const [importStatus, setImportStatus] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const fetchCategories = useCallback(async () => {
+    const response = await fetch('/api/categories');
+    const data = await response.json();
+    setCategories(data);
+    if (data.length > 0 && !activeCategory) {
+      setActiveCategory(data[0].id);
+    }
+  }, [activeCategory]);
 
   useEffect(() => {
     fetchCategories();
@@ -78,16 +82,9 @@ export default function SiteList() {
     if (savedCategory) {
       setActiveCategory(Number(savedCategory));
     }
-  }, []);
+  }, [fetchCategories]);
 
-  useEffect(() => {
-    if (activeCategory !== null) {
-      localStorage.setItem('activeCategory', activeCategory.toString());
-      fetchSites(activeCategory);
-    }
-  }, [activeCategory]);
-
-  const fetchSites = async (categoryId: number) => {
+  const fetchSites = useCallback(async (categoryId: number) => {
     setIsLoading(true);
     try {
       const response = await fetch(`/api/sites?categoryId=${categoryId}`);
@@ -99,16 +96,14 @@ export default function SiteList() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const fetchCategories = async () => {
-    const response = await fetch('/api/categories');
-    const data = await response.json();
-    setCategories(data);
-    if (data.length > 0 && !activeCategory) {
-      setActiveCategory(data[0].id);
+  useEffect(() => {
+    if (activeCategory !== null) {
+      localStorage.setItem('activeCategory', activeCategory.toString());
+      fetchSites(activeCategory);
     }
-  };
+  }, [activeCategory, fetchSites]);
 
   const fetchLanguages = async () => {
     const response = await fetch('/api/languages');
@@ -142,7 +137,13 @@ export default function SiteList() {
   };
 
   const showDialog = (site?: Site) => {
-    setEditingSite(site || null);
+    if (site) {
+      // categoryIds'i oluşturun
+      const categoryIds = site.categories.map((c) => c.category.id);
+      setEditingSite({ ...site, categoryIds });
+    } else {
+      setEditingSite(null);
+    }
     setIsDialogOpen(true);
   };
 
@@ -280,15 +281,16 @@ export default function SiteList() {
     sites.forEach((site) => checkSiteStatus(site.domainName));
   }, [sites, checkSiteStatus]);
 
-  const handleCategoryChange = (categoryId: number) => {
-    setActiveCategory(categoryId);
-    setSelectedItems([]);
-    setSelectAll(false);
-    fetchSites(categoryId);
-  };
+  const handleCategoryChange = useCallback(
+    (categoryId: number) => {
+      setActiveCategory(categoryId);
+      setSelectedItems([]);
+      fetchSites(categoryId);
+    },
+    [fetchSites]
+  );
 
   const handleSelectAllChange = (checked: boolean) => {
-    setSelectAll(checked);
     if (checked) {
       const filteredSites = activeCategory
         ? filterSitesByCategory(activeCategory)
@@ -299,7 +301,7 @@ export default function SiteList() {
     }
   };
 
-  const columns: Column<Site>[] = [
+  const columns: ExtendedColumn<Site>[] = [
     {
       Header: 'Domain',
       accessor: 'domainName',
@@ -334,11 +336,12 @@ export default function SiteList() {
       Header: 'Monthly',
       accessor: 'monthly',
       headerClassName: 'w-1/2',
-      className: 'text-xs',
+      className: 'text-xs text-center',
     },
     {
       Header: 'Languages',
       accessor: 'languages',
+      className: 'text-xs text-center',
       Cell: ({ row }) => (
         <div>
           {row.original.languages.map((l) => l.language.name).join(', ')}
@@ -350,7 +353,6 @@ export default function SiteList() {
       id: 'download',
       Cell: ({ row }) => (
         <Button
-          size="sm"
           variant="ghost"
           onClick={() => handleDownload(row.original.domainName)}
         >
@@ -359,47 +361,6 @@ export default function SiteList() {
       ),
     },
   ];
-
-  const handleImport = async () => {
-    setIsImporting(true);
-    setImportStatus('Starting import...');
-
-    try {
-      const response = await fetch('/api/sites/import-new-urls', {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        throw new Error('Import failed');
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('No reader available');
-      }
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = new TextDecoder().decode(value);
-        const lines = chunk.split('\n');
-        lines.forEach((line) => {
-          if (line) {
-            const { status } = JSON.parse(line);
-            setImportStatus(status);
-          }
-        });
-      }
-
-      setImportStatus('Import completed successfully');
-      fetchSites(activeCategory!);
-    } catch (error) {
-      console.error('Error during import:', error);
-      setImportStatus('Error during import');
-    } finally {
-      setIsImporting(false);
-    }
-  };
 
   return (
     <>
@@ -434,14 +395,15 @@ export default function SiteList() {
         activeCategory={activeCategory}
         onCategoryChange={handleCategoryChange}
         onBulkUpdateToggle={toggleBulkUpdate}
-        isLoading={isLoading}
       />
 
       {isBulkUpdateVisible && activeCategory && (
         <BulkUpdateVisitors
           activeCategory={activeCategory}
           onNotification={handleNotification}
-          onBulkUpdate={handleBulkUpdate}
+          onBulkUpdate={(updatedSites) =>
+            handleBulkUpdate(updatedSites as Site[])
+          }
         />
       )}
 
@@ -468,14 +430,7 @@ export default function SiteList() {
           siteStatuses={siteStatuses}
         />
 
-        <Button
-          variant="outline"
-          onClick={handleImport}
-          disabled={isImporting}
-          className=""
-        >
-          {isImporting ? 'Importing...' : 'Import New URLs'}
-        </Button>
+        <ImportNewUrls />
       </div>
       {notification && (
         <Notification

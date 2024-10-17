@@ -9,10 +9,9 @@ import React, {
 } from 'react';
 import { Check, ExternalLink, FileText } from 'lucide-react';
 import { Video } from '@prisma/client';
-import { TableComponent } from '@/components/TableComponent';
+import { TableComponent, ExtendedColumn } from '@/components/TableComponent';
 import Notification from '@/components/Notification';
 import { VideoModal } from './VideoModal';
-import { Column } from 'react-table';
 import { VideoActions } from './VideoActions';
 
 type State = {
@@ -114,6 +113,7 @@ export default function VideoList() {
       const data = await response.json();
       dispatch({ type: 'FETCH_VIDEOS_SUCCESS', payload: data });
     } catch (error) {
+      console.error('Failed to fetch videos:', error);
       dispatch({
         type: 'FETCH_VIDEOS_ERROR',
         payload: 'Failed to fetch videos',
@@ -134,6 +134,7 @@ export default function VideoList() {
         payload: { message: 'Video deleted successfully', type: 'success' },
       });
     } catch (error) {
+      console.error('Failed to delete video:', error);
       dispatch({
         type: 'SET_NOTIFICATION',
         payload: { message: 'Failed to delete video', type: 'error' },
@@ -156,6 +157,7 @@ export default function VideoList() {
           payload: { message: 'Video status updated', type: 'success' },
         });
       } catch (error) {
+        console.error('Failed to update video status:', error);
         dispatch({
           type: 'SET_NOTIFICATION',
           payload: { message: 'Failed to update video status', type: 'error' },
@@ -205,6 +207,10 @@ export default function VideoList() {
         },
       });
     } catch (error) {
+      console.error(
+        `Failed to ${editingVideo ? 'update' : 'add'} video:`,
+        error
+      );
       dispatch({
         type: 'SET_NOTIFICATION',
         payload: {
@@ -224,7 +230,7 @@ export default function VideoList() {
     return title.slice(0, maxLength) + '...';
   }, []);
 
-  const columns = useMemo<Column<Video>[]>(
+  const columns = useMemo<ExtendedColumn<Video>[]>(
     () => [
       {
         Header: 'Active',
@@ -312,7 +318,6 @@ export default function VideoList() {
         onEdit={openEditModal}
         onDelete={deleteVideo}
         expandedDescriptions={state.expandedNotes}
-        onDescriptionToggle={toggleNoteExpansion}
         renderSubComponent={renderSubComponent}
       />
 

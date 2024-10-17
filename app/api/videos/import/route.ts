@@ -1,50 +1,33 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]/route';
-
-function formatTitle(title: string): string {
-  return title
-    .trim()
-    .split(' ')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ')
-    .replace(/\|/g, '-')
-    .replace(/"/g, '');
-}
+import { Prisma } from '@prisma/client'; // Prisma hata tipini içe aktarıyoruz
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'admin') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const videos = await request.json();
+  const body = await request.json();
 
   try {
-    const importedVideos = await prisma.$transaction(
-      videos.map((video: { title: string; url: string; note?: string }) =>
-        prisma.video.create({
-          data: {
-            title: formatTitle(video.title),
-            url: video.url,
-            note: video.note,
-          },
-        })
-      )
-    );
-
-    return NextResponse.json(importedVideos);
+    const video = await prisma.video.create({
+      data: {
+        title: body.title,
+        url: body.url,
+        note: body.note,
+      },
+    });
+    return NextResponse.json(video);
   } catch (error) {
-    console.error('Error importing videos:', error);
-    if (error.code === 'P2002') {
+    // Prisma hatası olup olmadığını kontrol ediyoruz
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
       return NextResponse.json(
-        { error: 'Duplicate URL found' },
+        { message: 'URL must be unique' },
         { status: 400 }
       );
     }
+    // Diğer tüm hata durumları
     return NextResponse.json(
-      { error: 'Failed to import videos' },
+      { error: 'An error occurred while creating the video' },
       { status: 500 }
     );
   }

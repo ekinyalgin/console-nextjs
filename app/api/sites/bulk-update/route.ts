@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     const { minVisitors, maxVisitors, changeValue, changeType, category } =
       body;
 
-    const updatedSites = await prisma.site.updateMany({
+    await prisma.site.updateMany({
       where: {
         monthly: {
           gte: parseInt(minVisitors),

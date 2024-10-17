@@ -1,6 +1,5 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Shuffle, PlayCircle } from 'lucide-react';
 import { Exercise } from '@prisma/client';
 import { useRouter } from 'next/navigation';
 

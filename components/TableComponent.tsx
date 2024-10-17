@@ -1,18 +1,25 @@
 import React, { useState } from 'react';
-import { Column } from 'react-table';
 import { Button } from '@/components/ui/button';
 import { Settings2, Trash2, Check, X } from 'lucide-react';
 
+export type ExtendedColumn<T extends object> = {
+  Header: string | React.ReactNode;
+  accessor?: keyof T | string;
+  id?: string;
+  Cell?: (props: { value: unknown; row: { original: T } }) => React.ReactNode;
+  headerClassName?: string;
+  className?: string;
+};
+
 interface TableComponentProps<T extends object> {
-  columns: Column<T>[];
+  columns: ExtendedColumn<T>[];
   data: T[];
-  keyField: string;
+  keyField: keyof T;
   selectedIds?: number[];
   onSelectChange?: (id: number) => void;
   onSelectAll?: (isSelected: boolean) => void;
   onEdit?: (item: T) => void;
   onDelete?: (id: number) => void;
-  onDescriptionToggle?: (id: number) => void;
   expandedDescriptions?: number[];
   showEditAction?: boolean;
   showDeleteAction?: boolean;
@@ -28,7 +35,6 @@ export function TableComponent<T extends object>({
   onSelectAll,
   onEdit,
   onDelete,
-  onDescriptionToggle,
   expandedDescriptions = [],
   showEditAction = true,
   showDeleteAction = true,
@@ -43,7 +49,9 @@ export function TableComponent<T extends object>({
   };
 
   const handleConfirmDelete = (id: number) => {
-    onDelete && onDelete(id);
+    if (onDelete) {
+      onDelete(id);
+    }
     setDeleteConfirmation(null);
   };
 
@@ -64,9 +72,11 @@ export function TableComponent<T extends object>({
                   <input
                     type="checkbox"
                     checked={isAllSelected}
-                    onChange={(e) =>
-                      onSelectAll && onSelectAll(e.target.checked)
-                    }
+                    onChange={(e) => {
+                      if (onSelectAll) {
+                        onSelectAll(e.target.checked);
+                      }
+                    }}
                     className="mx-auto"
                   />
                 </div>
@@ -77,7 +87,7 @@ export function TableComponent<T extends object>({
                 key={index}
                 className={`px-4 py-2 font-normal tracking-wider ${column.headerClassName || ''}`}
               >
-                {column.Header as React.ReactNode}
+                {column.Header}
               </th>
             ))}
             {(showEditAction || showDeleteAction) && (
@@ -103,7 +113,7 @@ export function TableComponent<T extends object>({
                 {columns.map((column, index) => (
                   <td
                     key={index}
-                    className={`px-4 py-2 text-center text-sm ${column.className || ''}`}
+                    className={`px-4 py-2 text-sm ${column.className || ''}`}
                   >
                     {column.Cell
                       ? column.Cell({
@@ -117,11 +127,7 @@ export function TableComponent<T extends object>({
                   <td className="px-4 py-2 text-center">
                     <div className="flex justify-center space-x-2">
                       {showEditAction && onEdit && (
-                        <Button
-                          onClick={() => onEdit(item)}
-                          size="sm"
-                          variant="ghost"
-                        >
+                        <Button onClick={() => onEdit(item)} variant="ghost">
                           <Settings2 className="h-4 w-4" />
                         </Button>
                       )}
@@ -133,7 +139,6 @@ export function TableComponent<T extends object>({
                                 onClick={() =>
                                   handleConfirmDelete(item[keyField] as number)
                                 }
-                                size="sm"
                                 variant="ghost"
                                 className="text-green-600 hover:text-green-800"
                               >
@@ -141,7 +146,6 @@ export function TableComponent<T extends object>({
                               </Button>
                               <Button
                                 onClick={handleCancelDelete}
-                                size="sm"
                                 variant="ghost"
                                 className="text-red-600 hover:text-red-800"
                               >
@@ -153,7 +157,6 @@ export function TableComponent<T extends object>({
                               onClick={() =>
                                 handleDeleteClick(item[keyField] as number)
                               }
-                              size="sm"
                               variant="ghost"
                             >
                               <Trash2 className="h-4 w-4" />

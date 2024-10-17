@@ -81,7 +81,11 @@ export function BulkDownloadReports({
       }
     } catch (error) {
       console.error('Error during bulk download:', error);
-      setDownloadStatus(`Error: ${error.message}`);
+      if (error instanceof Error) {
+        setDownloadStatus(`Error: ${error.message}`);
+      } else {
+        setDownloadStatus('An unknown error occurred');
+      }
     }
   };
 

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { TableComponent } from '@/components/TableComponent';
-import { Column } from 'react-table';
+import { TableComponent, ExtendedColumn } from '@/components/TableComponent';
+
 import { Button } from '@/components/ui/button';
 import { Check } from 'lucide-react';
 
@@ -19,11 +19,7 @@ const URLsPage = () => {
   const domain = params.domain as string;
   const [urls, setUrls] = useState<URL[]>([]);
 
-  useEffect(() => {
-    fetchUrls();
-  }, [domain]);
-
-  const fetchUrls = async () => {
+  const fetchUrls = useCallback(async () => {
     try {
       const response = await fetch(`/api/sites/${domain}/urls`);
       const data = await response.json();
@@ -31,7 +27,11 @@ const URLsPage = () => {
     } catch (error) {
       console.error('Error fetching URLs:', error);
     }
-  };
+  }, [domain]); // domain bağımlılığına dikkat edin
+
+  useEffect(() => {
+    fetchUrls();
+  }, [fetchUrls]);
 
   const loadURLsFromExcel = async () => {
     try {
@@ -61,7 +61,7 @@ const URLsPage = () => {
     }
   };
 
-  const columns: Column<URL>[] = [
+  const columns: ExtendedColumn<URL>[] = [
     {
       Header: 'URL',
       accessor: 'url',
@@ -69,14 +69,15 @@ const URLsPage = () => {
     {
       Header: 'Status',
       accessor: 'reviewed',
-      Cell: ({ value }) => (value ? 'Reviewed' : 'Not Reviewed'),
+      Cell: ({ value }: { value: unknown }) =>
+        value ? 'Reviewed' : 'Not Reviewed',
     },
     {
       Header: 'Action',
       id: 'action',
-      Cell: ({ row }) => (
+      accessor: 'id', // Bir accessor eklemeliyiz
+      Cell: ({ row }: { row: { original: URL } }) => (
         <Button
-          size="sm"
           variant="ghost"
           onClick={() => handleReview(row.original.id)}
           disabled={row.original.reviewed}

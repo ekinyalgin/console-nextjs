@@ -11,7 +11,7 @@ export async function DELETE(
       where: { id },
     });
     return NextResponse.json({ message: 'Exercise deleted successfully' });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to delete exercise' },
       { status: 500 }
@@ -31,7 +31,7 @@ export async function PATCH(
       data: body,
     });
     return NextResponse.json(updatedExercise);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to update exercise' },
       { status: 500 }

@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
-export const BlogDomains = ({ title }) => {
+interface BlogDomainsProps {
+  title: string;
+}
+
+export const BlogDomains: React.FC<BlogDomainsProps> = ({ title }) => {
   const [domains, setDomains] = useState([]);
 
   useEffect(() => {

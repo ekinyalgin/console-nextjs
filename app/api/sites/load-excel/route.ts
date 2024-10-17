@@ -18,9 +18,14 @@ export async function GET(request: Request) {
     const fileBuffer = await fs.readFile(filePath);
     const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const data = xlsx.utils.sheet_to_json(sheet);
 
-    const urls = data.map((row: any) => row.URL || row.url).filter(Boolean);
+    // Burada sheet_to_json fonksiyonuna tip belirliyoruz
+    const data =
+      xlsx.utils.sheet_to_json<Record<string, string | undefined>>(sheet);
+
+    const urls = data
+      .map((row) => row.URL || row.url) // row'un tipini artık belirledik, bu yüzden hatasız
+      .filter(Boolean);
 
     return NextResponse.json(urls);
   } catch (error) {

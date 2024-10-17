@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
 import Image from 'next/image';
@@ -14,10 +14,16 @@ export default function AdminHeader() {
             <Link href="/admin" className="text-xl font-bold mr-6">
               Admin Panel
             </Link>
-            <Link href="/admin/users" className="text-gray-300 hover:text-white mr-4">
+            <Link
+              href="/admin/users"
+              className="text-gray-300 hover:text-white mr-4"
+            >
               Users
             </Link>
-            <Link href="/admin/settings" className="text-gray-300 hover:text-white">
+            <Link
+              href="/admin/settings"
+              className="text-gray-300 hover:text-white"
+            >
               Settings
             </Link>
           </div>
@@ -31,7 +37,7 @@ export default function AdminHeader() {
                 className="rounded-full mr-2"
               />
             )}
-            <span className="mr-4">{session?.user?.firstname}</span>
+            <span className="mr-4">{session?.user?.name}</span>
             <button
               onClick={() => signOut({ callbackUrl: '/' })}
               className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"

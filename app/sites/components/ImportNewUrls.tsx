@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 
 const ImportNewUrls: React.FC = () => {
   const [isImporting, setIsImporting] = useState(false);
@@ -51,13 +52,14 @@ const ImportNewUrls: React.FC = () => {
 
   return (
     <div>
-      <button
+      <Button
         onClick={handleImport}
         disabled={isImporting}
-        className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
+        variant="outline"
+        className=""
       >
         {isImporting ? 'Importing...' : 'Import New URLs'}
-      </button>
+      </Button>
       {status && <p className="mt-2">{status}</p>}
     </div>
   );

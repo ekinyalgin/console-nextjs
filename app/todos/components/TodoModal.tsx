@@ -12,11 +12,30 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash } from 'lucide-react';
 
-export function TodoDialog({ isOpen, onClose, onSave, todo }) {
+interface TodoLink {
+  url: string;
+  icon: string;
+}
+
+interface Todo {
+  title: string;
+  date: string;
+  note?: string;
+  links?: TodoLink[];
+}
+
+interface TodoDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (todo: Todo) => void;
+  todo: Todo | null;
+}
+
+export function TodoDialog({ isOpen, onClose, onSave, todo }: TodoDialogProps) {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [note, setNote] = useState('');
-  const [links, setLinks] = useState([]);
+  const [links, setLinks] = useState<TodoLink[]>([]);
 
   useEffect(() => {
     if (todo) {
@@ -36,13 +55,17 @@ export function TodoDialog({ isOpen, onClose, onSave, todo }) {
     setLinks([...links, { url: '', icon: '' }]);
   };
 
-  const handleRemoveLink = (index) => {
+  const handleRemoveLink = (index: number) => {
     const newLinks = [...links];
     newLinks.splice(index, 1);
     setLinks(newLinks);
   };
 
-  const handleLinkChange = (index, field, value) => {
+  const handleLinkChange = (
+    index: number,
+    field: keyof TodoLink,
+    value: string
+  ) => {
     const newLinks = [...links];
     newLinks[index][field] = value;
     setLinks(newLinks);
@@ -83,7 +106,6 @@ export function TodoDialog({ isOpen, onClose, onSave, todo }) {
             <Button
               onClick={handleAddLink}
               variant="primary"
-              size="sm"
               className="flex items-center"
             >
               <Plus className="mr-2 h-4 w-4" /> Add Link
@@ -103,11 +125,7 @@ export function TodoDialog({ isOpen, onClose, onSave, todo }) {
                   handleLinkChange(index, 'icon', e.target.value)
                 }
               />
-              <Button
-                onClick={() => handleRemoveLink(index)}
-                variant="ghost"
-                size="icon"
-              >
+              <Button onClick={() => handleRemoveLink(index)} variant="ghost">
                 <Trash className="h-4 w-4" />
               </Button>
             </div>
