@@ -4,9 +4,6 @@ import { Button } from '@/components/ui/button';
 interface BulkDownloadReportsProps {
   selectedItems: number[];
   sites: Site[];
-  siteStatuses: {
-    [key: string]: { hasExcel: boolean; hasNotReviewedUrls: boolean };
-  };
 }
 
 interface Site {
@@ -19,31 +16,27 @@ interface Site {
 export function BulkDownloadReports({
   selectedItems,
   sites,
-  siteStatuses,
 }: BulkDownloadReportsProps) {
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
 
   const handleBulkDownload = async () => {
     try {
       setDownloadStatus('Starting bulk download...');
-      const selectedDomains = sites
-        .filter(
-          (site) =>
-            selectedItems.includes(site.id) &&
-            siteStatuses[site.domainName]?.hasExcel
-        )
-        .map((site) => ({
-          domainName: site.domainName,
-          language: site.languages[0]?.language.name.toLowerCase() || 'en',
-          monthlyVisitors: site.monthly,
-        }));
 
-      if (selectedDomains.length === 0) {
-        setDownloadStatus(
-          'No domains selected for download or no Excel files available.'
-        );
+      const selectedSites = sites.filter((site) =>
+        selectedItems.includes(site.id)
+      );
+
+      if (selectedSites.length === 0) {
+        setDownloadStatus('No domains selected for download.');
         return;
       }
+
+      const selectedDomains = selectedSites.map((site) => ({
+        domainName: site.domainName,
+        language: site.languages[0]?.language.name.toLowerCase() || 'en',
+        monthlyVisitors: site.monthly,
+      }));
 
       const response = await fetch('/api/sites/bulk-download', {
         method: 'POST',
@@ -90,7 +83,7 @@ export function BulkDownloadReports({
   };
 
   return (
-    <div className="">
+    <div className="relative">
       <Button
         onClick={handleBulkDownload}
         variant="outline"
@@ -98,7 +91,9 @@ export function BulkDownloadReports({
       >
         Download Reports ({selectedItems.length})
       </Button>
-      {downloadStatus && <p className="text-sm">{downloadStatus}</p>}
+      {downloadStatus && (
+        <p className="absolute top-10 text-xs">{downloadStatus}</p>
+      )}
     </div>
   );
 }

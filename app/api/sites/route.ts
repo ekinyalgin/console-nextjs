@@ -12,6 +12,7 @@ export async function GET(request: Request) {
     );
   }
 
+  // Kategoriye göre site verilerini getir
   try {
     const sites = await prisma.site.findMany({
       where: {

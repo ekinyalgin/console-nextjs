@@ -1,9 +1,15 @@
-"use client";
+'use client';
 import { ReactNode } from 'react';
 import { signIn } from 'next-auth/react';
-import { FaGoogle } from "react-icons/fa";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription  } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { FaGoogle } from 'react-icons/fa';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 interface ModalProps {
   isOpen: boolean;
@@ -26,10 +32,18 @@ export default function SignInModal({ isOpen, onClose }: ModalProps) {
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
-          <Button onClick={handleGoogleSignIn} variant="destructive" className="w-full flex items-center justify-center">
+          <Button
+            onClick={handleGoogleSignIn}
+            variant="destructive"
+            className="py-2 rounded text-sm w-full flex items-center justify-center"
+          >
             <FaGoogle className="mr-4" /> Sign In with Google
           </Button>
-          <Button onClick={onClose} variant="secondary" className="w-full">
+          <Button
+            onClick={onClose}
+            variant="secondary"
+            className="py-3 rounded w-full"
+          >
             Cancel
           </Button>
         </div>

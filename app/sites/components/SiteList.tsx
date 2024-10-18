@@ -65,30 +65,14 @@ export default function SiteList() {
     useState<boolean>(false);
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  const fetchCategories = useCallback(async () => {
-    const response = await fetch('/api/categories');
-    const data = await response.json();
-    setCategories(data);
-    if (data.length > 0 && !activeCategory) {
-      setActiveCategory(data[0].id);
-    }
-  }, [activeCategory]);
-
-  useEffect(() => {
-    fetchCategories();
-    fetchLanguages();
-    const savedCategory = localStorage.getItem('activeCategory');
-    if (savedCategory) {
-      setActiveCategory(Number(savedCategory));
-    }
-  }, [fetchCategories]);
+  const [isCategoriesLoaded, setIsCategoriesLoaded] = useState(false);
 
   const fetchSites = useCallback(async (categoryId: number) => {
     setIsLoading(true);
     try {
       const response = await fetch(`/api/sites?categoryId=${categoryId}`);
       const data = await response.json();
+      console.log('Fetched sites:', data);
       setSites(data);
     } catch (error) {
       console.error('Error fetching sites:', error);
@@ -98,12 +82,36 @@ export default function SiteList() {
     }
   }, []);
 
+  const fetchCategories = useCallback(async () => {
+    try {
+      const response = await fetch('/api/categories');
+      const data = await response.json();
+      setCategories(data);
+      setIsCategoriesLoaded(true);
+      if (data.length > 0) {
+        const savedCategory = localStorage.getItem('activeCategory');
+        const initialCategory = savedCategory
+          ? Number(savedCategory)
+          : data[0].id;
+        setActiveCategory(initialCategory);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      handleNotification('Error fetching categories', 'error');
+    }
+  }, []);
+
   useEffect(() => {
-    if (activeCategory !== null) {
+    fetchCategories();
+    fetchLanguages();
+  }, [fetchCategories]);
+
+  useEffect(() => {
+    if (isCategoriesLoaded && activeCategory !== null) {
       localStorage.setItem('activeCategory', activeCategory.toString());
       fetchSites(activeCategory);
     }
-  }, [activeCategory, fetchSites]);
+  }, [isCategoriesLoaded, activeCategory, fetchSites]);
 
   const fetchLanguages = async () => {
     const response = await fetch('/api/languages');
@@ -149,19 +157,22 @@ export default function SiteList() {
 
   const handleSubmit = async (siteData: Partial<Site>) => {
     try {
+      let response;
       if (editingSite) {
-        await fetch(`/api/sites/${editingSite.id}`, {
+        response = await fetch(`/api/sites/by-id/${editingSite.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(siteData),
         });
       } else {
-        await fetch('/api/sites', {
+        response = await fetch('/api/sites', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(siteData),
         });
       }
+      const updatedSite = await response.json();
+      console.log('Updated site:', updatedSite);
       setIsDialogOpen(false);
       fetchSites(activeCategory!);
       handleNotification(
@@ -424,12 +435,7 @@ export default function SiteList() {
         />
       )}
       <div className="flex items-center space-x-2 mt-4">
-        <BulkDownloadReports
-          selectedItems={selectedItems}
-          sites={sites}
-          siteStatuses={siteStatuses}
-        />
-
+        <BulkDownloadReports selectedItems={selectedItems} sites={sites} />
         <ImportNewUrls />
       </div>
       {notification && (

@@ -112,6 +112,7 @@ export default function Header() {
                 <Button
                   onClick={() => setIsSignInModalOpen(true)}
                   variant="outline"
+                  className="bg-transparent border-none text-transparent hover:bg-transparent hover:border-none hover:text-transparent cursor-default"
                 >
                   Sign In
                 </Button>
